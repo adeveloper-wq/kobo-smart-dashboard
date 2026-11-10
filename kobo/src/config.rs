@@ -71,7 +71,7 @@ pub struct DeviceConfig {
 }
 
 fn default_orientation() -> String {
-    "portrait".to_string()
+    "landscape".to_string()
 }
 fn default_touch_device() -> String {
     "auto".to_string()
@@ -117,21 +117,18 @@ impl DeviceConfig {
 
     pub fn resolve_dimensions(&self, probed: Option<(u32, u32)>) -> (u32, u32) {
         if self.width > 0 && self.height > 0 {
-            return (self.width, self.height);
+            return (self.width.max(self.height), self.width.min(self.height));
         }
         let (pw, ph) = probed
             .map(|(a, b)| (a.min(b), a.max(b)))
             .or_else(|| models::by_key(&self.model).map(|m| (m.width, m.height)))
             .unwrap_or((1072, 1448));
-        if self.is_landscape() {
-            (ph, pw)
-        } else {
-            (pw, ph)
-        }
+        // Dashboard only supports horizontal (landscape)
+        (pw.max(ph), pw.min(ph))
     }
 
     pub fn is_landscape(&self) -> bool {
-        self.orientation.to_lowercase() == "landscape"
+        true
     }
 
     pub fn canvas_rotation(&self) -> Rotation {

@@ -9,8 +9,8 @@ device:
   # clara_hd, libra_h2o, etc. or "auto"
   model: "auto"
 
-  # "portrait" or "landscape"
-  orientation: "portrait"
+  # Horizontal orientation (only supported mode)
+  orientation: "landscape"
 
   # Perform a full flashing e-ink refresh every N screen updates
   full_refresh_cycles: 10
@@ -62,12 +62,10 @@ pages:
         subtitle: "Lade Dashboard..."
         icon: "sun"
       - type: "weather"
-        forecast_days: 3
+        forecast_days: 4
       - type: "calendar"
-        title: "Heutige Termine"
+        title: "Person 1"
         events: []
-      - type: "humidity"
-        title: "Luftfeuchtigkeit"
-        value: "--"
-        unit: "%"
-        status: "Lade..."
+      - type: "calendar"
+        title: "Person 2"
+        events: []

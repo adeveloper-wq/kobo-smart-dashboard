@@ -35,9 +35,12 @@ pub fn render_greeting_card(
     let sub_text = subtitle.unwrap_or("");
 
     let title_size = if rect.w >= 600.0 { type_scale::TITLE + 4.0 } else { type_scale::TITLE };
-    canvas.draw_text_fit(title_text, tx, y0 + 4.0, title_size, true, theme.text, TextAlign::Left, max_w);
+    let text_block_h = title_size + if !sub_text.is_empty() { 14.0 + type_scale::BODY } else { 0.0 };
+    let text_y = y0 + (rect.h - 2.0 * PAD - text_block_h).max(0.0) / 2.0;
+
+    canvas.draw_text_fit(title_text, tx, text_y, title_size, true, theme.text, TextAlign::Left, max_w);
 
     if !sub_text.is_empty() {
-        canvas.draw_text_fit(sub_text, tx, y0 + title_size + 14.0, type_scale::BODY, false, theme.text_muted, TextAlign::Left, max_w);
+        canvas.draw_text_fit(sub_text, tx, text_y + title_size + 14.0, type_scale::BODY, false, theme.text_muted, TextAlign::Left, max_w);
     }
 }

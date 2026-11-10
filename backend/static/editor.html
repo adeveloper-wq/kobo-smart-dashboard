@@ -86,16 +86,16 @@
 
     .main-container {
       display: grid;
-      grid-template-columns: 1fr 480px;
+      grid-template-columns: 1fr 1.25fr;
       gap: 24px;
       padding: 24px;
       flex: 1;
-      max-width: 1600px;
+      max-width: 1750px;
       margin: 0 auto;
       width: 100%;
     }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1200px) {
       .main-container { grid-template-columns: 1fr; }
     }
 
@@ -125,16 +125,16 @@
     .tab-btn.active { background: var(--primary); color: #000; font-weight: 700; }
 
     .form-group {
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
     .form-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 10px;
     }
 
     label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
@@ -149,7 +149,7 @@
       transition: border-color 0.15s;
     }
     input:focus, select:focus, textarea:focus { border-color: var(--primary); }
-    textarea { resize: vertical; min-height: 80px; }
+    textarea { resize: vertical; min-height: 70px; }
 
     .schedule-item {
       background: var(--bg);
@@ -162,13 +162,13 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       padding-bottom: 8px;
       border-bottom: 1px solid var(--surface-alt);
     }
     .schedule-title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
 
-    /* Kobo Screen Simulator */
+    /* Horizontal Kobo Screen Simulator */
     .preview-sticky {
       position: sticky;
       top: 90px;
@@ -180,7 +180,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 16px;
+      padding: 14px 18px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -190,14 +190,13 @@
     .kobo-bezel {
       background: #000;
       border-radius: 20px;
-      padding: 16px 14px 24px 14px;
+      padding: 18px 20px;
       box-shadow: 0 16px 36px rgba(0,0,0,0.8), inset 0 0 0 2px #27272a;
     }
     .kobo-screen {
       background: #ffffff;
       color: #000000;
       border-radius: 6px;
-      min-height: 560px;
       padding: 18px;
       display: flex;
       flex-direction: column;
@@ -205,7 +204,7 @@
       position: relative;
     }
 
-    /* Screen Elements (High-contrast B&W Dashboard preview) */
+    /* Screen Elements (High-contrast B&W Horizontal Dashboard preview) */
     .ks-header {
       display: flex;
       justify-content: space-between;
@@ -215,13 +214,20 @@
     }
     .ks-clock { font-size: 26px; font-weight: 800; color: #000; }
     .ks-date { font-size: 12px; color: #333; font-weight: 600; }
-    .ks-icons { display: flex; gap: 8px; font-size: 12px; color: #000; filter: grayscale(100%); }
+    .ks-icons { display: flex; gap: 10px; font-size: 12px; color: #000; filter: grayscale(100%); }
+
+    /* 2-column layout rows */
+    .ks-grid-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
 
     .ks-greeting {
       background: #ffffff;
       border: 2px solid #000000;
       border-radius: 18px;
-      padding: 14px;
+      padding: 14px 16px;
       display: flex;
       gap: 14px;
       align-items: center;
@@ -240,49 +246,97 @@
       filter: grayscale(100%);
     }
     .ks-greeting-title { font-size: 18px; font-weight: 800; color: #000; }
-    .ks-greeting-sub { font-size: 12px; color: #333; margin-top: 2px; }
+    .ks-greeting-sub { font-size: 12px; color: #444; margin-top: 4px; }
 
     .ks-weather {
       background: #ffffff;
       border: 2px solid #000000;
       border-radius: 18px;
-      padding: 14px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .ks-weather-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .ks-weather-main { display: flex; align-items: baseline; gap: 8px; }
-    .ks-temp { font-size: 38px; font-weight: 900; color: #000; }
-    .ks-cond { font-size: 14px; font-weight: 700; color: #000; }
-    .ks-forecast-row { display: flex; gap: 12px; margin-top: 8px; filter: grayscale(100%); }
-    .ks-fc-day { font-size: 11px; text-align: center; color: #000; }
+    .ks-temp { font-size: 34px; font-weight: 900; color: #000; }
+    .ks-cond { font-size: 13px; font-weight: 700; color: #000; }
+    .ks-weather-metrics { font-size: 11px; color: #333; }
 
-    .ks-calendar {
+    .ks-forecast-strip {
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid #ccc;
+      padding-top: 8px;
+      margin-top: 8px;
+    }
+    .ks-fc-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 11px;
+      color: #000;
+    }
+    .ks-fc-day-name { font-weight: 700; font-size: 10px; }
+    .ks-fc-icon { font-size: 18px; margin: 2px 0; filter: grayscale(100%); }
+    .ks-fc-temp { font-weight: 700; font-size: 11px; }
+    .ks-fc-low { font-size: 10px; color: #666; margin-left: 2px; }
+
+    /* Side-by-side Calendar columns */
+    .ks-calendar-card {
       background: #ffffff;
       border: 2px solid #000000;
       border-radius: 18px;
-      padding: 14px;
-      flex: 1;
+      padding: 14px 16px;
       display: flex;
       flex-direction: column;
       gap: 8px;
+      min-height: 240px;
     }
-    .ks-cal-title { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #000; letter-spacing: 0.5px; }
+    .ks-cal-title {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #000;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 4px;
+    }
+    .ks-events-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
     .ks-event-item {
       display: flex;
-      gap: 10px;
-      padding: 6px 0;
-      border-bottom: 1px dashed #999999;
-      font-size: 13px;
+      gap: 8px;
+      padding: 4px 0;
+      border-bottom: 1px dashed #cccccc;
+      font-size: 12px;
       color: #000;
+      align-items: baseline;
     }
-    .ks-event-time { font-weight: 700; min-width: 90px; color: #000; font-size: 12px; }
-    .ks-event-title { font-weight: 600; flex: 1; color: #000; }
+    .ks-event-badge {
+      font-weight: 700;
+      color: #000;
+      background: #eee;
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .ks-event-time { font-weight: 700; min-width: 72px; color: #000; font-size: 11px; }
+    .ks-event-title { font-weight: 600; flex: 1; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .ks-sleep-bar {
       background: #000000;
       color: #ffffff;
-      padding: 8px 12px;
+      padding: 8px 14px;
       border-radius: 20px;
       font-size: 12px;
       font-weight: 700;
@@ -315,7 +369,7 @@
       <div class="brand-icon">K</div>
       <div class="brand-title">
         <h1>Kobo Dashboard Backend</h1>
-        <p>Multi-Schedule Config Builder</p>
+        <p>Horizontal Two-Person Multi-Schedule Dashboard</p>
       </div>
     </div>
     <div class="header-actions">
@@ -334,8 +388,8 @@
     <!-- Left Column: Config Builder -->
     <div class="card-panel">
       <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('schedules')">⏰ Time of Day Schedules</button>
-        <button class="tab-btn" onclick="switchTab('services')">🌤️ Weather & Calendar</button>
+        <button class="tab-btn active" onclick="switchTab('schedules')">⏰ Schedules & Greetings</button>
+        <button class="tab-btn" onclick="switchTab('services')">👥 Two Calendars & Weather</button>
         <button class="tab-btn" onclick="switchTab('theme')">🎨 Theme & Display</button>
         <button class="tab-btn" onclick="switchTab('json')">{ } Raw JSON</button>
       </div>
@@ -344,8 +398,10 @@
       <div id="tab-schedules">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div>
-            <h3>Configured Time Periods</h3>
-            <p style="font-size: 13px; color: var(--text-muted);">The backend automatically serves different greetings, event scopes, and sleep schedules depending on the hour.</p>
+            <h3>Schedules (Greetings & Sleep/Wi-Fi)</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+              Schedules control the greeting options and sleep settings for each time of day. All other dashboard cards stay fixed.
+            </p>
           </div>
           <button class="btn-secondary btn-sm" onclick="addSchedule()">+ Add Schedule</button>
         </div>
@@ -355,46 +411,68 @@
         </div>
       </div>
 
-      <!-- Tab 2: Services -->
+      <!-- Tab 2: Calendars & Weather -->
       <div id="tab-services" style="display: none;">
-        <h3 style="margin-bottom: 14px;">User & Location Settings</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label>User Name</label>
-            <input type="text" id="userName" placeholder="Daniel">
+        <h3 style="margin-bottom: 14px;">👥 Two Person Calendars (Next 4 Events Each)</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+          The dashboard is person-independent and displays two separate calendar columns side by side.
+        </p>
+
+        <!-- Person 1 -->
+        <div class="schedule-item">
+          <div class="schedule-header">
+            <span class="schedule-title">📅 Person 1 Calendar</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Person 1 Name / Title</label>
+              <input type="text" id="cal1Name" placeholder="Person 1" oninput="syncFormToConfig(); refreshPreview();">
+            </div>
           </div>
           <div class="form-group">
-            <label>Timezone</label>
-            <input type="text" id="serverTimezone" placeholder="Europe/Berlin">
+            <label>Secret iCal (.ics) URL</label>
+            <textarea id="cal1IcalUrl" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" oninput="syncFormToConfig();"></textarea>
           </div>
         </div>
 
-        <h3 style="margin-top: 18px; margin-bottom: 14px;">🌤️ Weather & Humidity (Open-Meteo)</h3>
+        <!-- Person 2 -->
+        <div class="schedule-item">
+          <div class="schedule-header">
+            <span class="schedule-title">📅 Person 2 Calendar</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Person 2 Name / Title</label>
+              <input type="text" id="cal2Name" placeholder="Person 2" oninput="syncFormToConfig(); refreshPreview();">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Secret iCal (.ics) URL</label>
+            <textarea id="cal2IcalUrl" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" oninput="syncFormToConfig();"></textarea>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 24px; margin-bottom: 14px;">🌤️ Weather & Forecast Location</h3>
         <div class="form-row">
           <div class="form-group">
             <label>Latitude</label>
-            <input type="number" step="0.0001" id="weatherLat">
+            <input type="number" step="0.0001" id="weatherLat" onchange="syncFormToConfig(); refreshPreview();">
           </div>
           <div class="form-group">
             <label>Longitude</label>
-            <input type="number" step="0.0001" id="weatherLon">
+            <input type="number" step="0.0001" id="weatherLon" onchange="syncFormToConfig(); refreshPreview();">
           </div>
           <div class="form-group">
             <label>Temperature Unit</label>
-            <select id="weatherUnit">
+            <select id="weatherUnit" onchange="syncFormToConfig(); refreshPreview();">
               <option value="celsius">Celsius (°C)</option>
               <option value="fahrenheit">Fahrenheit (°F)</option>
             </select>
           </div>
-        </div>
-
-        <h3 style="margin-top: 18px; margin-bottom: 14px;">📅 Google Calendar / Gmail iCal Feeds</h3>
-        <div class="form-group">
-          <label>Secret iCal (.ics) URL</label>
-          <textarea id="calIcalUrl" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"></textarea>
-          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-            In Google Calendar: Settings & Sharing → Choose calendar → <b>Secret address in iCal format</b>. Paste the URL here.
-          </p>
+          <div class="form-group">
+            <label>Server Timezone</label>
+            <input type="text" id="serverTimezone" placeholder="Europe/Berlin" onchange="syncFormToConfig();">
+          </div>
         </div>
       </div>
 
@@ -403,9 +481,8 @@
         <h3 style="margin-bottom: 14px;">Display & E-Ink Appearance</h3>
         <div class="form-row">
           <div class="form-group">
-            <label>Display Mode</label>
-            <input type="text" value="High Contrast Black & White (Fixed)" disabled style="opacity: 0.8; cursor: not-allowed;">
-            <input type="hidden" id="themeMode" value="high_contrast_bw">
+            <label>Orientation</label>
+            <input type="text" value="Horizontal (Landscape Only)" disabled style="opacity: 0.8; cursor: not-allowed;">
           </div>
           <div class="form-group">
             <label>Card Corner Radius (px)</label>
@@ -413,7 +490,7 @@
           </div>
           <div class="form-group">
             <label>Time Format</label>
-            <select id="themeTimeFmt">
+            <select id="themeTimeFmt" onchange="syncFormToConfig(); refreshPreview();">
               <option value="24h">24-hour (14:30)</option>
               <option value="12h">12-hour (2:30 PM)</option>
             </select>
@@ -432,10 +509,13 @@
 
     </div>
 
-    <!-- Right Column: Live Kobo Screen Simulator -->
+    <!-- Right Column: Live Horizontal Kobo Screen Simulator -->
     <div class="preview-sticky">
       <div class="preview-controls">
-        <label>Live Kobo Screen Preview</label>
+        <div>
+          <label style="font-weight: 700; color: #fff;">Horizontal E-Ink Preview</label>
+          <span style="font-size: 11px; color: var(--text-muted); margin-left: 8px;">(Landscape)</span>
+        </div>
         <select id="previewScheduleSelect" onchange="loadPreviewForSchedule(this.value)">
           <option value="">Current Time (Live)</option>
         </select>
@@ -443,7 +523,7 @@
 
       <div class="kobo-bezel">
         <div class="kobo-screen" id="koboScreen">
-          <!-- Dynamic E-Ink Screen Content (Shows the dashboard) -->
+          <!-- Header -->
           <div class="ks-header">
             <div>
               <div class="ks-clock" id="ksClock">--:--</div>
@@ -452,39 +532,60 @@
             <div class="ks-icons">
               <span>🔋 85%</span>
               <span>📶 Wi-Fi</span>
+              <span>🚪 Exit</span>
             </div>
           </div>
 
-          <div class="ks-greeting" id="ksGreeting">
-            <div class="ks-greeting-icon" id="ksGreetingIcon">☀️</div>
-            <div>
-              <div class="ks-greeting-title" id="ksGreetingTitle">Guten Tag</div>
-              <div class="ks-greeting-sub" id="ksGreetingSub">Loading preview...</div>
-            </div>
-          </div>
-
-          <div class="ks-weather" id="ksWeather">
-            <div>
-              <div class="ks-weather-main">
-                <span class="ks-temp" id="ksTemp">--°</span>
-                <span class="ks-cond" id="ksCond">--</span>
-              </div>
-              <div style="font-size: 12px; color: #000; margin-top: 4px;">
-                <span style="filter: grayscale(100%);">💧</span> Luftfeuchtigkeit: <b id="ksHumidity">--%</b> (<span id="ksHumidityStatus">--</span>)
+          <!-- Row 1: Greeting + Weather (with Forecast) -->
+          <div class="ks-grid-row">
+            <!-- Greeting Card -->
+            <div class="ks-greeting" id="ksGreeting">
+              <div class="ks-greeting-icon" id="ksGreetingIcon">☀️</div>
+              <div>
+                <div class="ks-greeting-title" id="ksGreetingTitle">Guten Tag!</div>
+                <div class="ks-greeting-sub" id="ksGreetingSub">Loading preview...</div>
               </div>
             </div>
-            <div id="ksWeatherIcon" style="font-size: 34px; filter: grayscale(100%);">⛅</div>
-          </div>
 
-          <div class="ks-calendar" id="ksCalendar">
-            <div class="ks-cal-title" id="ksCalTitle">Termine</div>
-            <div id="ksEventsList" style="display: flex; flex-direction: column; gap: 4px;">
-              <!-- Events dynamically rendered -->
+            <!-- Weather Card with Forecast -->
+            <div class="ks-weather" id="ksWeather">
+              <div class="ks-weather-top">
+                <div class="ks-weather-main">
+                  <span class="ks-temp" id="ksTemp">--°</span>
+                  <span class="ks-cond" id="ksCond">--</span>
+                </div>
+                <div class="ks-weather-metrics">
+                  <span>💧 <b id="ksHumidity">--%</b> (<span id="ksHumidityStatus">--</span>)</span>
+                </div>
+              </div>
+              <div class="ks-forecast-strip" id="ksForecastStrip">
+                <!-- Forecast days dynamically injected -->
+              </div>
             </div>
           </div>
 
+          <!-- Row 2: Side-by-side Calendars in Separate Columns -->
+          <div class="ks-grid-row">
+            <!-- Person 1 Calendar -->
+            <div class="ks-calendar-card" id="ksCalendarCard1">
+              <div class="ks-cal-title" id="ksCalTitle1">PERSON 1</div>
+              <div class="ks-events-container" id="ksEventsList1">
+                <!-- Person 1 events -->
+              </div>
+            </div>
+
+            <!-- Person 2 Calendar -->
+            <div class="ks-calendar-card" id="ksCalendarCard2">
+              <div class="ks-cal-title" id="ksCalTitle2">PERSON 2</div>
+              <div class="ks-events-container" id="ksEventsList2">
+                <!-- Person 2 events -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Sleep Mode Bar -->
           <div class="ks-sleep-bar" id="ksSleepBar">
-            <span><span style="filter: grayscale(100%);">🌙</span> Ruhemodus</span>
+            <span>🌙 Ruhemodus</span>
             <span id="ksSleepNote">Nächstes Update in 30 Min.</span>
           </div>
 
@@ -531,14 +632,21 @@
     }
 
     function populateForm(cfg) {
-      document.getElementById('userName').value = cfg.user?.name || '';
       document.getElementById('serverTimezone').value = cfg.server?.timezone || '';
 
       document.getElementById('weatherLat').value = cfg.weather?.latitude || 52.52;
       document.getElementById('weatherLon').value = cfg.weather?.longitude || 13.405;
       document.getElementById('weatherUnit').value = cfg.weather?.temperature_unit || 'celsius';
 
-      document.getElementById('calIcalUrl').value = (cfg.calendar?.ical_urls || []).join('\n');
+      const cals = cfg.calendars || [];
+      const cal1 = cals[0] || {};
+      const cal2 = cals[1] || {};
+
+      document.getElementById('cal1Name').value = cal1.name || 'Person 1';
+      document.getElementById('cal1IcalUrl').value = cal1.ical_url || (cal1.ical_urls || []).join('\n');
+
+      document.getElementById('cal2Name').value = cal2.name || 'Person 2';
+      document.getElementById('cal2IcalUrl').value = cal2.ical_url || (cal2.ical_urls || []).join('\n');
 
       document.getElementById('themeRadius').value = cfg.theme?.card_corner_radius || 18;
       document.getElementById('themeTimeFmt').value = cfg.theme?.time_format || '24h';
@@ -550,7 +658,7 @@
     function applyCardRadius(radius) {
       const val = (radius !== undefined && radius !== '') ? radius : (currentConfig.theme?.card_corner_radius || 18);
       const r = parseFloat(val) + 'px';
-      document.querySelectorAll('.ks-greeting, .ks-weather, .ks-calendar').forEach(el => {
+      document.querySelectorAll('.ks-greeting, .ks-weather, .ks-calendar-card').forEach(el => {
         el.style.borderRadius = r;
       });
     }
@@ -562,6 +670,8 @@
       schedules.forEach((s, idx) => {
         const div = document.createElement('div');
         div.className = 'schedule-item';
+        const greetingsText = (s.greetings || [s.greeting?.title || "Guten Tag!"]).join('\n');
+
         div.innerHTML = `
           <div class="schedule-header">
             <div class="schedule-title">
@@ -586,26 +696,15 @@
               <label>End Time</label>
               <input type="time" value="${s.end_time}" onchange="updateScheduleProp(${idx}, 'end_time', this.value)">
             </div>
-            <div class="form-group">
-              <label>Calendar Scope</label>
-              <select onchange="updateScheduleProp(${idx}, 'calendar_scope', this.value)">
-                <option value="today" ${s.calendar_scope === 'today' ? 'selected' : ''}>Today's Events</option>
-                <option value="today_remaining" ${s.calendar_scope === 'today_remaining' ? 'selected' : ''}>Today's Remaining</option>
-                <option value="tomorrow" ${s.calendar_scope === 'tomorrow' ? 'selected' : ''}>Tomorrow's Events</option>
-                <option value="next_24h" ${s.calendar_scope === 'next_24h' ? 'selected' : ''}>Next 24 Hours</option>
-              </select>
-            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Greeting Options (one per line, random one is chosen)</label>
+            <textarea rows="3" onchange="updateScheduleGreetingsList(${idx}, this.value)">${greetingsText}</textarea>
+            <p style="font-size: 11px; color: var(--text-muted);">Whenever this schedule is active, one greeting from this list is randomly selected.</p>
           </div>
 
           <div class="form-row">
-            <div class="form-group">
-              <label>Greeting Title Template</label>
-              <input type="text" value="${s.greeting?.title || ''}" onchange="updateScheduleGreeting(${idx}, 'title', this.value)">
-            </div>
-            <div class="form-group">
-              <label>Greeting Subtitle</label>
-              <input type="text" value="${s.greeting?.subtitle || ''}" onchange="updateScheduleGreeting(${idx}, 'subtitle', this.value)">
-            </div>
             <div class="form-group">
               <label>Wake Interval (Seconds)</label>
               <input type="number" step="60" value="${s.sleep_mode?.update_interval_seconds || 1800}" onchange="updateScheduleSleep(${idx}, 'update_interval_seconds', parseInt(this.value))">
@@ -624,9 +723,9 @@
       currentConfig.schedules[idx][key] = val;
       refreshPreview();
     }
-    function updateScheduleGreeting(idx, key, val) {
-      if (!currentConfig.schedules[idx].greeting) currentConfig.schedules[idx].greeting = {};
-      currentConfig.schedules[idx].greeting[key] = val;
+    function updateScheduleGreetingsList(idx, text) {
+      const list = text.split('\n').map(s => s.trim()).filter(Boolean);
+      currentConfig.schedules[idx].greetings = list.length > 0 ? list : ["Guten Tag!"];
       refreshPreview();
     }
     function updateScheduleSleep(idx, key, val) {
@@ -645,19 +744,18 @@
         name: "Custom Period",
         start_time: "14:00",
         end_time: "17:00",
-        greeting: { title: "Guten Tag, {name}!", subtitle: "Einen angenehmen Nachmittag", icon: "sun" },
-        calendar_scope: "today",
-        cards: [{type: "greeting"}, {type: "weather"}, {type: "calendar"}, {type: "humidity"}],
-        sleep_mode: { enabled: true, update_interval_seconds: 1800 }
+        greetings: [
+          "Guten Nachmittag!",
+          "Schöne Pause!",
+          "Hallo zusammen!"
+        ],
+        sleep_mode: { enabled: true, update_interval_seconds: 1800, sleep_after_secs: 30 }
       });
       renderSchedulesList(currentConfig.schedules);
       refreshPreview();
     }
 
     function syncFormToConfig() {
-      if (!currentConfig.user) currentConfig.user = {};
-      currentConfig.user.name = document.getElementById('userName').value;
-
       if (!currentConfig.server) currentConfig.server = {};
       currentConfig.server.timezone = document.getElementById('serverTimezone').value;
 
@@ -666,16 +764,40 @@
       currentConfig.weather.longitude = parseFloat(document.getElementById('weatherLon').value) || 13.405;
       currentConfig.weather.temperature_unit = document.getElementById('weatherUnit').value;
 
-      if (!currentConfig.calendar) currentConfig.calendar = {};
-      const icalLines = document.getElementById('calIcalUrl').value.split('\n').map(s => s.trim()).filter(Boolean);
-      currentConfig.calendar.ical_urls = icalLines;
+      const cal1Name = document.getElementById('cal1Name').value || 'Person 1';
+      const cal1Url = document.getElementById('cal1IcalUrl').value.trim();
+      const cal2Name = document.getElementById('cal2Name').value || 'Person 2';
+      const cal2Url = document.getElementById('cal2IcalUrl').value.trim();
+
+      const existingCals = currentConfig.calendars || [];
+      const p1Existing = existingCals[0] || {};
+      const p2Existing = existingCals[1] || {};
+
+      currentConfig.calendars = [
+        {
+          id: p1Existing.id || "person1",
+          name: cal1Name,
+          enabled: true,
+          ical_url: cal1Url,
+          cache_ttl_seconds: p1Existing.cache_ttl_seconds || 900,
+          fallback_events: p1Existing.fallback_events || []
+        },
+        {
+          id: p2Existing.id || "person2",
+          name: cal2Name,
+          enabled: true,
+          ical_url: cal2Url,
+          cache_ttl_seconds: p2Existing.cache_ttl_seconds || 900,
+          fallback_events: p2Existing.fallback_events || []
+        }
+      ];
 
       if (!currentConfig.theme) currentConfig.theme = {};
       currentConfig.theme.mode = "high_contrast_bw";
+      currentConfig.theme.orientation = "landscape";
       currentConfig.theme.card_corner_radius = parseFloat(document.getElementById('themeRadius').value) || 18.0;
       currentConfig.theme.time_format = document.getElementById('themeTimeFmt').value;
       currentConfig.theme.language = "de";
-      delete currentConfig.theme.accent_color;
     }
 
     function updateScheduleSelect(schedules) {
@@ -706,45 +828,69 @@
       refreshPreview(id);
     }
 
+    function weatherEmoji(cond) {
+      switch(cond) {
+        case 'sunny': return '☀️';
+        case 'partly_cloudy': return '⛅';
+        case 'cloudy': return '☁️';
+        case 'rainy': return '🌧️';
+        case 'snowy': return '❄️';
+        case 'lightning': return '⚡';
+        case 'fog': return '🌫️';
+        default: return '🌤️';
+      }
+    }
+
     function renderEinkScreen(data) {
       const now = new Date(data.generated_at);
       document.getElementById('ksClock').textContent = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false });
       document.getElementById('ksDate').textContent = now.toLocaleDateString('de-DE', { weekday: 'long', month: 'short', day: 'numeric' });
 
-      // Greeting
+      // Greeting (Randomly chosen)
       if (data.greeting) {
         document.getElementById('ksGreetingTitle').textContent = data.greeting.title || '';
         document.getElementById('ksGreetingSub').textContent = data.greeting.subtitle || '';
         document.getElementById('ksGreetingIcon').textContent = data.greeting.icon === 'moon' ? '🌙' : '☀️';
       }
 
-      // Weather
+      // Weather + Forecast
       if (data.weather) {
         document.getElementById('ksTemp').textContent = `${Math.round(data.weather.temperature || 0)}${data.weather.temperature_unit || '°C'}`;
         document.getElementById('ksCond').textContent = data.weather.condition_label || '';
         document.getElementById('ksHumidity').textContent = `${Math.round(data.weather.humidity || 0)}%`;
         document.getElementById('ksHumidityStatus').textContent = data.weather.humidity_status || 'Angenehm';
-      }
 
-      // Calendar
-      const eventsList = document.getElementById('ksEventsList');
-      eventsList.innerHTML = '';
-      const events = data.calendar?.events || [];
-      document.getElementById('ksCalTitle').textContent = (data.calendar?.scope === 'tomorrow') ? "Termine morgen" : "Heutige Termine";
-
-      if (events.length === 0) {
-        eventsList.innerHTML = '<div style="font-size: 12px; color: #777; padding: 12px 0; text-align: center;">Keine anstehenden Termine</div>';
-      } else {
-        events.forEach(ev => {
-          const item = document.createElement('div');
-          item.className = 'ks-event-item';
-          item.innerHTML = `
-            <div class="ks-event-time">${ev.time}</div>
-            <div class="ks-event-title">${ev.title}</div>
+        // Render 4-day forecast
+        const fcContainer = document.getElementById('ksForecastStrip');
+        fcContainer.innerHTML = '';
+        const forecast = data.weather.forecast || [];
+        forecast.slice(0, 4).forEach((fc, idx) => {
+          let dayName = 'Heute';
+          if (idx > 0) {
+            const d = new Date(fc.datetime);
+            dayName = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()];
+          }
+          const div = document.createElement('div');
+          div.className = 'ks-fc-day';
+          div.innerHTML = `
+            <span class="ks-fc-day-name">${dayName}</span>
+            <span class="ks-fc-icon">${weatherEmoji(fc.condition)}</span>
+            <span class="ks-fc-temp">${Math.round(fc.temperature)}°<span class="ks-fc-low">${fc.templow !== undefined ? Math.round(fc.templow) + '°' : ''}</span></span>
           `;
-          eventsList.appendChild(item);
+          fcContainer.appendChild(div);
         });
       }
+
+      // Two Calendars side by side
+      const cals = data.calendars || [];
+      const cal1 = cals[0] || { person: "Person 1", events: [] };
+      const cal2 = cals[1] || { person: "Person 2", events: [] };
+
+      document.getElementById('ksCalTitle1').textContent = cal1.person.toUpperCase();
+      document.getElementById('ksCalTitle2').textContent = cal2.person.toUpperCase();
+
+      renderEventList('ksEventsList1', cal1.events || []);
+      renderEventList('ksEventsList2', cal2.events || []);
 
       // Sleep Bar
       if (data.sleep) {
@@ -752,6 +898,26 @@
       }
 
       applyCardRadius(data.theme?.card_corner_radius);
+    }
+
+    function renderEventList(elementId, events) {
+      const container = document.getElementById(elementId);
+      container.innerHTML = '';
+      if (!events || events.length === 0) {
+        container.innerHTML = '<div style="font-size: 12px; color: #777; padding: 20px 0; text-align: center;">Keine anstehenden Termine</div>';
+        return;
+      }
+      events.slice(0, 4).forEach(ev => {
+        const item = document.createElement('div');
+        item.className = 'ks-event-item';
+        const dateBadge = ev.date_label ? `<span class="ks-event-badge">${ev.date_label}</span>` : '';
+        item.innerHTML = `
+          ${dateBadge}
+          <div class="ks-event-time">${ev.is_all_day ? 'Ganztägig' : ev.time}</div>
+          <div class="ks-event-title" title="${ev.title}">${ev.title}</div>
+        `;
+        container.appendChild(item);
+      });
     }
 
     async function saveConfig() {

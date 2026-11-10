@@ -8,17 +8,19 @@ Runs on **Ubuntu / Debian / Linux / macOS / Windows** using **only the Python st
 ## Features
 
 - **Zero Dependencies**: Uses Python's built-in `http.server`, `urllib.request`, `json`, and `datetime`.
-- **Dynamic Time-of-Day Schedules**:
-  - **Morning (06:00 - 12:00)**: Warm morning greeting, today's schedule, current weather & humidity.
-  - **Afternoon (12:00 - 18:00)**: Afternoon greeting, remaining tasks for today, weather.
-  - **Evening (18:00 - 22:30)**: Evening greeting, **tomorrow's agenda at a glance**, weather.
-  - **Night (22:30 - 06:00)**: Night greeting, minimal overview, and deep sleep mode.
-- **Google Calendar / Gmail Integration**:
-  - Connects to Google Calendar via your private/secret iCal (`.ics`) feed URL.
-  - Automatically filters events based on the active schedule (`today`, `today_remaining`, `tomorrow`, `next_24h`).
-- **Free Weather & Humidity (Open-Meteo)**:
-  - Fetches local temperature, weather condition, forecast, and relative humidity percentage.
+- **Horizontal-Only Layout**: Designed exclusively for landscape e-ink orientation with balanced 2x2 multi-card presentation.
+- **Two-Person Calendars Side-by-Side**:
+  - Independent calendar feeds for two persons displayed side by side in separate columns.
+  - Always displays the next 4 events for each person with chronological date badges, start/end times, and locations.
+- **Person-Independent Random Greetings**:
+  - Provide a list of greeting options per time-of-day schedule (e.g. "Guten Morgen", "Guten Start in den Tag", "GuMo").
+  - The backend randomly selects an option on each refresh.
+- **Weather & Multi-Day Forecast**:
+  - Fetches current temperature, humidity, wind, condition, and 4-day forecast from Open-Meteo.
   - No API keys or registration required.
+- **Time-of-Day Schedules**:
+  - Controls greeting options and sleep/Wi-Fi intervals (e.g. morning, afternoon, evening, night).
+  - All cards and layout remain fixed and consistent.
 - **Smart E-Ink Sleep & Wake Precalculation**:
   - The backend calculates exactly when the next refresh is needed (e.g. at period change, next event, or custom interval).
   - Tells the Kobo to shut off Wi-Fi, program its hardware RTC alarm, and wake up only when fresh data is needed.

@@ -33,7 +33,7 @@ pub fn render_calendar_card(
         return;
     }
 
-    let time_col_w = if rect.w >= 600.0 { 160.0 } else { 130.0 };
+    let time_col_w = if rect.w >= 600.0 { 180.0 } else { 140.0 };
     let row_h = 48.0;
 
     for ev in events {
@@ -41,9 +41,24 @@ pub fn render_calendar_card(
             break;
         }
 
-        // Event Time Badge / Text
-        let time_str = if ev.is_all_day { "Ganztägig" } else { &ev.time };
-        canvas.draw_text_fit(time_str, x0, y0 + 6.0, type_scale::LABEL, true, theme.accent.solid, TextAlign::Left, time_col_w - 12.0);
+        // Event Time and Date Badge
+        let time_badge = match &ev.date_label {
+            Some(label) if !label.is_empty() => {
+                if ev.is_all_day {
+                    format!("{} · Ganztägig", label)
+                } else {
+                    format!("{} {}", label, ev.time)
+                }
+            }
+            _ => {
+                if ev.is_all_day {
+                    "Ganztägig".to_string()
+                } else {
+                    ev.time.clone()
+                }
+            }
+        };
+        canvas.draw_text_fit(&time_badge, x0, y0 + 6.0, type_scale::LABEL, true, theme.accent.solid, TextAlign::Left, time_col_w - 12.0);
 
         // Title and Location
         let title_x = x0 + time_col_w;

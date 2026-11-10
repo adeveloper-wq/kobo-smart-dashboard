@@ -99,13 +99,14 @@ def parse_ics_events(ics_content: str, local_tz: Optional[timezone] = None) -> L
 
 def filter_and_format_events(
     events: List[Dict[str, Any]],
-    scope: str = 'today',
+    scope: str = 'all_upcoming',
     reference_dt: Optional[datetime] = None,
-    max_events: int = 5
+    max_events: int = 4
 ) -> List[Dict[str, Any]]:
     """
-    Filter events by scope ('today', 'today_remaining', 'tomorrow', 'next_24h', 'all_upcoming')
+    Filter events by scope ('all_upcoming', 'today', 'today_remaining', 'tomorrow', 'next_24h')
     and format them into friendly JSON dictionaries for display.
+    Defaults to all upcoming events, returning the next 4 events.
     """
     if reference_dt is None:
         reference_dt = datetime.now().astimezone()
@@ -139,9 +140,9 @@ def filter_and_format_events(
         elif scope == 'next_24h':
             include = (reference_dt <= local_start <= reference_dt + timedelta(hours=24)) or (local_start <= reference_dt <= local_end)
         elif scope == 'all_upcoming':
-            include = (local_end >= reference_dt)
+            include = (ev['is_all_day'] and ev_date >= ref_date) or (local_end >= reference_dt)
         else:
-            include = (ev_date == ref_date)
+            include = (ev['is_all_day'] and ev_date >= ref_date) or (local_end >= reference_dt)
 
         if include:
             # Format time string

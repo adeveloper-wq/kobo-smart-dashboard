@@ -112,24 +112,61 @@ pub const HEADER_WITHOUT_TABS: f32 = 122.0;
 fn zones_for<'a>(cards: &'a [CardConfig], cw: f32, ch: f32, top: f32) -> Vec<(&'a CardConfig, Rect)> {
     let avail_h = ch - top - BOTTOM_PAD;
     let content_w = cw - 2.0 * SIDE_PAD;
-    let all: Vec<&CardConfig> = cards.iter().collect();
+    let half_w = (content_w - GAP) / 2.0;
+
+    // Separate into top cards (greeting, weather, humidity) and calendar cards (for both persons)
+    let (cals, non_cals): (Vec<&CardConfig>, Vec<&CardConfig>) =
+        cards.iter().partition(|c| matches!(c, CardConfig::Calendar { .. }));
+
+    // When we have 2 calendars and horizontal layout:
+    // Display calendars for both persons side by side in separate columns!
+    if cals.len() == 2 && !non_cals.is_empty() {
+        let usable_h = (avail_h - GAP).max(100.0);
+        let top_h = (usable_h * 0.44).clamp(180.0, 320.0);
+        let cal_h = usable_h - top_h;
+        let cal_y = top + top_h + GAP;
+
+        let mut out = Vec::new();
+
+        // Top Row: non_cals (Greeting + Weather with forecast)
+        if non_cals.len() == 2 {
+            out.push((non_cals[0], Rect::new(SIDE_PAD, top, half_w, top_h)));
+            out.push((non_cals[1], Rect::new(SIDE_PAD + half_w + GAP, top, half_w, top_h)));
+        } else if non_cals.len() == 1 {
+            out.push((non_cals[0], Rect::new(SIDE_PAD, top, content_w, top_h)));
+        } else {
+            for (idx, r) in layout_zone(&non_cals, SIDE_PAD, top, content_w, top_h) {
+                out.push((non_cals[idx], r));
+            }
+        }
+
+        // Bottom Row: Both calendars side by side in separate columns!
+        out.push((cals[0], Rect::new(SIDE_PAD, cal_y, half_w, cal_h)));
+        out.push((cals[1], Rect::new(SIDE_PAD + half_w + GAP, cal_y, half_w, cal_h)));
+
+        return out;
+    }
+
+    // Fallback general 2-column or 1-column layout
     if cw > ch {
         let (left, right): (Vec<&CardConfig>, Vec<&CardConfig>) =
-            cards.iter().partition(|c| matches!(c, CardConfig::Weather { .. }));
-        let right_half_w = (content_w - LANDSCAPE_LEFT_W - GAP - GAP) / 2.0;
-        if !left.is_empty() && !right.is_empty() && right_half_w >= LANDSCAPE_MIN_HALF_W {
+            cards.iter().partition(|c| matches!(c, CardConfig::Weather { .. } | CardConfig::Greeting { .. }));
+        if !left.is_empty() && !right.is_empty() {
+            let left_w = (content_w * 0.45).clamp(340.0, 560.0);
+            let right_x = SIDE_PAD + left_w + GAP;
+            let right_w = content_w - left_w - GAP;
             let mut out = Vec::new();
-            for (idx, r) in layout_zone(&left, SIDE_PAD, top, LANDSCAPE_LEFT_W, avail_h) {
+            for (idx, r) in layout_zone(&left, SIDE_PAD, top, left_w, avail_h) {
                 out.push((left[idx], r));
             }
-            let right_x = SIDE_PAD + LANDSCAPE_LEFT_W + GAP;
-            let right_w = content_w - LANDSCAPE_LEFT_W - GAP;
             for (idx, r) in layout_zone(&right, right_x, top, right_w, avail_h) {
                 out.push((right[idx], r));
             }
             return out;
         }
     }
+
+    let all: Vec<&CardConfig> = cards.iter().collect();
     layout_zone(&all, SIDE_PAD, top, content_w, avail_h).into_iter().map(|(idx, r)| (all[idx], r)).collect()
 }
 

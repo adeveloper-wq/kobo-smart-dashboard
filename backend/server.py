@@ -18,6 +18,7 @@ import sys
 import json
 import time
 import re
+import random
 import urllib.parse
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -46,7 +47,7 @@ STATIC_DIR = BACKEND_DIR / "static"
 
 # In-memory caches with timestamps
 _weather_cache = {"data": None, "timestamp": 0.0}
-_calendar_cache = {"data": None, "timestamp": 0.0}
+_calendar_cache = {}  # {cal_id: {"data": None, "timestamp": 0.0}}
 ENABLE_BUILDER = True
 
 
@@ -115,14 +116,12 @@ def find_active_schedule(config: dict, now: datetime) -> dict:
     schedules = config.get("schedules", [])
     if not schedules:
         return {
-            "id": "default",
-            "name": "Standard-Dashboard",
+            "id": "morning",
+            "name": "Standard",
             "start_time": "00:00",
             "end_time": "23:59",
-            "greeting": {"title": "Hallo, {name}!", "subtitle": "Willkommen auf deinem Dashboard", "icon": "sun"},
-            "calendar_scope": "today",
-            "cards": [{"type": "greeting"}, {"type": "weather"}, {"type": "calendar"}, {"type": "humidity"}],
-            "sleep_mode": {"enabled": True, "update_interval_seconds": 1800}
+            "greetings": ["Guten Tag!", "Hallo zusammen!", "Moin!"],
+            "sleep_mode": {"enabled": True, "update_interval_seconds": 1800, "sleep_after_secs": 30}
         }
 
     cur_time = now.time()
@@ -224,21 +223,52 @@ def get_weather_data(config: dict) -> dict:
         return weather_client.get_mock_weather(unit)
 
 
-def get_calendar_events(config: dict, scope: str, now: datetime) -> tuple[list, datetime]:
-    """Fetch, parse, and filter calendar events for given scope."""
+def get_configured_calendars(config: dict) -> list[dict]:
+    """Retrieve the list of calendar configurations, supporting both 'calendars' and legacy 'calendar'."""
+    if "calendars" in config and isinstance(config["calendars"], list) and len(config["calendars"]) > 0:
+        return config["calendars"]
+    
+    # Fallback to legacy single calendar
+    legacy = config.get("calendar", {})
+    return [
+        {
+            "id": "person1",
+            "name": "Person 1",
+            "enabled": legacy.get("enabled", True),
+            "ical_urls": legacy.get("ical_urls", []),
+            "fallback_events": legacy.get("fallback_events", [])
+        },
+        {
+            "id": "person2",
+            "name": "Person 2",
+            "enabled": True,
+            "ical_urls": [],
+            "fallback_events": []
+        }
+    ]
+
+
+def get_person_calendar_events(cal_cfg: dict, now: datetime) -> tuple[list, Optional[datetime]]:
+    """Fetch, parse, and filter events for a specific person's calendar, always returning next 4 events."""
     global _calendar_cache
-    cal_cfg = config.get("calendar", {})
     if not cal_cfg.get("enabled", True):
         return [], None
 
+    cal_id = cal_cfg.get("id") or cal_cfg.get("name", "person")
     ttl = cal_cfg.get("cache_ttl_seconds", 900)
     now_ts = time.time()
     raw_events = []
 
-    if _calendar_cache["data"] and (now_ts - _calendar_cache["timestamp"] < ttl):
-        raw_events = _calendar_cache["data"]
+    cached = _calendar_cache.get(cal_id)
+    if cached and (now_ts - cached["timestamp"] < ttl):
+        raw_events = cached["data"]
     else:
-        urls = cal_cfg.get("ical_urls", [])
+        urls = []
+        if "ical_url" in cal_cfg and cal_cfg["ical_url"]:
+            urls.append(cal_cfg["ical_url"])
+        if "ical_urls" in cal_cfg and isinstance(cal_cfg["ical_urls"], list):
+            urls.extend(cal_cfg["ical_urls"])
+
         tz = now.tzinfo or timezone.utc
 
         for url in urls:
@@ -249,9 +279,9 @@ def get_calendar_events(config: dict, scope: str, now: datetime) -> tuple[list, 
                 parsed = calendar_parser.parse_ics_events(content, tz)
                 raw_events.extend(parsed)
             except Exception as e:
-                sys.stderr.write(f"Error fetching calendar {url}: {e}\n")
+                sys.stderr.write(f"Error fetching calendar {url} for {cal_id}: {e}\n")
 
-        # If no events found or no URLs configured, use fallback/sample events
+        # If no events found or no URLs configured, use fallback events
         if not raw_events:
             fallbacks = cal_cfg.get("fallback_events", [])
             for item in fallbacks:
@@ -266,9 +296,10 @@ def get_calendar_events(config: dict, scope: str, now: datetime) -> tuple[list, 
                     "is_all_day": item.get("is_all_day", False),
                 })
 
-        _calendar_cache = {"data": raw_events, "timestamp": now_ts}
+        _calendar_cache[cal_id] = {"data": raw_events, "timestamp": now_ts}
 
-    formatted = calendar_parser.filter_and_format_events(raw_events, scope=scope, reference_dt=now, max_events=6)
+    # Always return next 4 events
+    formatted = calendar_parser.filter_and_format_events(raw_events, scope="all_upcoming", reference_dt=now, max_events=4)
 
     # Find earliest upcoming event start
     next_event_dt = None
@@ -284,7 +315,10 @@ def get_calendar_events(config: dict, scope: str, now: datetime) -> tuple[list, 
 def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> dict:
     """
     Build the full JSON payload requested by the Kobo frontend.
-    Contains theme, greetings, weather, calendar, layout cards, and sleep instructions.
+    Horizontal-only dashboard layout:
+    - Row 1: Greeting + Weather (current & forecast)
+    - Row 2: Calendars for two persons side by side in separate columns (4 events each)
+    - Bottom: Deep sleep instructions & wake interval
     """
     now = get_current_time(config)
 
@@ -295,78 +329,98 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
     else:
         schedule = find_active_schedule(config, now)
 
-    # 1. Fetch Weather & Humidity
+    # 1. Weather Data (Current + Forecast)
     weather_data = get_weather_data(config)
 
-    # 2. Fetch Calendar
-    scope = schedule.get("calendar_scope", "today")
-    calendar_events, next_event_dt = get_calendar_events(config, scope, now)
+    # 2. Calendars for both persons (next 4 events each)
+    cal_configs = get_configured_calendars(config)
+    calendars_payload = []
+    earliest_event_dt = None
+
+    for cal_cfg in cal_configs[:2]:  # support two persons
+        person_name = cal_cfg.get("name", "Person")
+        events, next_dt = get_person_calendar_events(cal_cfg, now)
+        calendars_payload.append({
+            "id": cal_cfg.get("id", person_name.lower().replace(" ", "_")),
+            "person": person_name,
+            "events": events
+        })
+        if next_dt:
+            if earliest_event_dt is None or next_dt < earliest_event_dt:
+                earliest_event_dt = next_dt
+
+    # If fewer than 2 persons configured, ensure a second person exists
+    if len(calendars_payload) < 2:
+        default_person_name = "Person 2"
+        calendars_payload.append({
+            "id": "person2",
+            "person": default_person_name,
+            "events": []
+        })
 
     # 3. Calculate Sleep / Next update
-    sleep_info = calculate_next_update(config, schedule, now, next_event_dt)
+    sleep_info = calculate_next_update(config, schedule, now, earliest_event_dt)
 
-    # 4. Format Greeting
-    user_name = config.get("user", {}).get("name", "Benutzer")
-    raw_greeting = schedule.get("greeting", {})
-    title_tpl = raw_greeting.get("title", "Hallo, {name}!")
-    title = title_tpl.replace("{name}", user_name)
+    # 4. Format Greeting (Person-independent, random choice from options per schedule)
+    greetings_list = schedule.get("greetings")
+    if isinstance(greetings_list, list) and len(greetings_list) > 0:
+        title = random.choice(greetings_list)
+    elif isinstance(schedule.get("greeting"), dict):
+        title = schedule.get("greeting", {}).get("title", "Guten Tag!")
+    else:
+        title = "Guten Tag!"
 
-    subtitle = raw_greeting.get("subtitle", "")
-    if "{date}" in subtitle or not subtitle:
-        german_weekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
-        german_months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"]
-        wd = german_weekdays[now.weekday()]
-        mo = german_months[now.month - 1]
-        date_str = f"{wd}, {now.day}. {mo}"
-        count = len(calendar_events)
-        event_text = "1 Termin geplant" if count == 1 else f"{count} Termine geplant"
-        subtitle = f"{date_str} · {event_text}"
+    # Clean any legacy {name} placeholders
+    title = title.replace(", {name}", "").replace(" {name}", "").replace("{name}", "")
+
+    # Subtitle: German day and date
+    german_weekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+    german_months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"]
+    wd = german_weekdays[now.weekday()]
+    mo = german_months[now.month - 1]
+    subtitle = f"{wd}, {now.day}. {mo}"
+
+    sched_id = schedule.get("id", "")
+    icon = "moon" if sched_id in ("evening", "night") else "sun"
 
     greeting_data = {
         "title": title,
         "subtitle": subtitle,
-        "icon": raw_greeting.get("icon", "sun")
+        "icon": icon
     }
 
-    # 5. Build dynamic Cards array based on schedule configuration
-    resolved_cards = []
-    card_configs = schedule.get("cards", [])
-    
-    for c in card_configs:
-        c_type = c.get("type", "")
-        if c_type == "greeting":
-            resolved_cards.append({
-                "type": "greeting",
-                "title": greeting_data["title"],
-                "subtitle": greeting_data["subtitle"],
-                "icon": greeting_data["icon"]
-            })
-        elif c_type == "weather":
-            resolved_cards.append({
-                "type": "weather",
-                "title": c.get("title", "Wetter"),
-                "forecast_days": c.get("forecast_days", 3),
-                "data": weather_data
-            })
-        elif c_type == "calendar":
-            calendar_title = c.get("title", "Termine")
-            resolved_cards.append({
-                "type": "calendar",
-                "title": calendar_title,
-                "scope": scope,
-                "events": calendar_events
-            })
-        elif c_type == "humidity":
-            resolved_cards.append({
-                "type": "humidity",
-                "title": c.get("title", "Luftfeuchtigkeit"),
-                "value": f"{weather_data.get('humidity', 50):.0f}",
-                "unit": "%",
-                "status": weather_data.get("humidity_status", "Angenehm"),
-                "icon": "droplet"
-            })
-        else:
-            resolved_cards.append(c)
+    # 5. Fixed Horizontal Cards Layout:
+    # Card 1: Greeting
+    # Card 2: Weather (Current + 4-day forecast)
+    # Card 3: Calendar Person 1 (Next 4 events)
+    # Card 4: Calendar Person 2 (Next 4 events)
+    person1_cal = calendars_payload[0]
+    person2_cal = calendars_payload[1]
+
+    resolved_cards = [
+        {
+            "type": "greeting",
+            "title": greeting_data["title"],
+            "subtitle": greeting_data["subtitle"],
+            "icon": greeting_data["icon"]
+        },
+        {
+            "type": "weather",
+            "title": "Wetter",
+            "forecast_days": 4,
+            "data": weather_data
+        },
+        {
+            "type": "calendar",
+            "title": person1_cal["person"],
+            "events": person1_cal["events"]
+        },
+        {
+            "type": "calendar",
+            "title": person2_cal["person"],
+            "events": person2_cal["events"]
+        }
+    ]
 
     theme_cfg = config.get("theme", {})
 
@@ -381,15 +435,17 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
         },
         "theme": {
             "mode": "high_contrast_bw",
+            "orientation": "landscape",
             "card_corner_radius": theme_cfg.get("card_corner_radius", 18.0),
             "time_format": theme_cfg.get("time_format", "24h"),
             "language": theme_cfg.get("language", "de")
         },
         "greeting": greeting_data,
         "weather": weather_data,
+        "calendars": calendars_payload,
         "calendar": {
-            "scope": scope,
-            "events": calendar_events
+            "scope": "all_upcoming",
+            "events": person1_cal["events"] + person2_cal["events"]
         },
         "cards": resolved_cards,
         "sleep": sleep_info
@@ -520,7 +576,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 # Clear caches so new coordinates or URLs take effect immediately
                 global _weather_cache, _calendar_cache
                 _weather_cache = {"data": None, "timestamp": 0.0}
-                _calendar_cache = {"data": None, "timestamp": 0.0}
+                _calendar_cache = {}
 
                 self.send_json({"status": "ok", "message": "Configuration saved successfully"})
             except Exception as e:

@@ -5,9 +5,6 @@
     "timezone": "Europe/Berlin",
     "enable_builder": true
   },
-  "user": {
-    "name": "Benutzer"
-  },
   "weather": {
     "enabled": true,
     "provider": "open-meteo",
@@ -16,43 +13,85 @@
     "temperature_unit": "celsius",
     "cache_ttl_seconds": 900
   },
-  "calendar": {
-    "enabled": true,
-    "ical_urls": [],
-    "cache_ttl_seconds": 900,
-    "fallback_events": [
-      {
-        "title": "Team Morgen-Standup",
-        "time": "09:30 - 10:00",
-        "date_label": "Heute",
-        "location": "Google Meet",
-        "is_all_day": false
-      },
-      {
-        "title": "Projekt Architektur-Review",
-        "time": "14:00 - 15:30",
-        "date_label": "Heute",
-        "location": "Raum 402",
-        "is_all_day": false
-      },
-      {
-        "title": "Zahnarzttermin",
-        "time": "10:15 - 11:00",
-        "date_label": "Morgen",
-        "location": "Praxis Dr. Schmidt",
-        "is_all_day": false
-      },
-      {
-        "title": "Sprint-Planung",
-        "time": "15:00 - 16:30",
-        "date_label": "Morgen",
-        "location": "Google Meet",
-        "is_all_day": false
-      }
-    ]
-  },
+  "calendars": [
+    {
+      "id": "person1",
+      "name": "Person 1",
+      "enabled": true,
+      "ical_url": "",
+      "cache_ttl_seconds": 900,
+      "fallback_events": [
+        {
+          "title": "Team Morgen-Standup",
+          "time": "09:30 - 10:00",
+          "date_label": "Heute",
+          "location": "Google Meet",
+          "is_all_day": false
+        },
+        {
+          "title": "Projekt Architektur-Review",
+          "time": "14:00 - 15:30",
+          "date_label": "Heute",
+          "location": "Raum 402",
+          "is_all_day": false
+        },
+        {
+          "title": "Zahnarzttermin",
+          "time": "10:15 - 11:00",
+          "date_label": "Morgen",
+          "location": "Praxis Dr. Schmidt",
+          "is_all_day": false
+        },
+        {
+          "title": "Sport / Fitness",
+          "time": "18:00 - 19:30",
+          "date_label": "Morgen",
+          "location": "Gym",
+          "is_all_day": false
+        }
+      ]
+    },
+    {
+      "id": "person2",
+      "name": "Person 2",
+      "enabled": true,
+      "ical_url": "",
+      "cache_ttl_seconds": 900,
+      "fallback_events": [
+        {
+          "title": "Vorlesung / Seminar",
+          "time": "10:00 - 11:30",
+          "date_label": "Heute",
+          "location": "Hörsaal B",
+          "is_all_day": false
+        },
+        {
+          "title": "Mittagessen mit Sarah",
+          "time": "12:30 - 13:30",
+          "date_label": "Heute",
+          "location": "Café Central",
+          "is_all_day": false
+        },
+        {
+          "title": "Bibliothek Lernen",
+          "time": "15:00 - 17:00",
+          "date_label": "Heute",
+          "location": "Unibibliothek",
+          "is_all_day": false
+        },
+        {
+          "title": "Konzert Probe",
+          "time": "19:00 - 21:00",
+          "date_label": "Morgen",
+          "location": "Musikschule",
+          "is_all_day": false
+        }
+      ]
+    }
+  ],
   "theme": {
     "mode": "high_contrast_bw",
+    "orientation": "landscape",
     "card_corner_radius": 18.0,
     "time_format": "24h",
     "language": "de"
@@ -60,20 +99,14 @@
   "schedules": [
     {
       "id": "morning",
-      "name": "Morgen-Dashboard",
+      "name": "Morgen",
       "start_time": "06:00",
       "end_time": "12:00",
-      "greeting": {
-        "title": "Guten Morgen, {name}!",
-        "subtitle": "Dein Tagesplan für heute",
-        "icon": "sun"
-      },
-      "calendar_scope": "today",
-      "cards": [
-        { "type": "greeting" },
-        { "type": "weather", "forecast_days": 3 },
-        { "type": "calendar", "title": "Heutige Termine", "max_events": 5 },
-        { "type": "humidity", "title": "Luftfeuchtigkeit" }
+      "greetings": [
+        "Guten Morgen!",
+        "Guten Start in den Tag!",
+        "GuMo!",
+        "Schönen Vormittag!"
       ],
       "sleep_mode": {
         "enabled": true,
@@ -84,20 +117,14 @@
     },
     {
       "id": "afternoon",
-      "name": "Nachmittag-Dashboard",
+      "name": "Nachmittag",
       "start_time": "12:00",
       "end_time": "18:00",
-      "greeting": {
-        "title": "Guten Tag, {name}!",
-        "subtitle": "Verbleibende Termine für heute",
-        "icon": "sun"
-      },
-      "calendar_scope": "today_remaining",
-      "cards": [
-        { "type": "greeting" },
-        { "type": "calendar", "title": "Heutige Termine", "max_events": 4 },
-        { "type": "weather", "forecast_days": 3 },
-        { "type": "humidity", "title": "Luftfeuchtigkeit" }
+      "greetings": [
+        "Guten Tag!",
+        "Schönen Nachmittag!",
+        "Hallo zusammen!",
+        "Mahlzeit!"
       ],
       "sleep_mode": {
         "enabled": true,
@@ -108,20 +135,13 @@
     },
     {
       "id": "evening",
-      "name": "Abend-Dashboard",
+      "name": "Abend",
       "start_time": "18:00",
       "end_time": "22:30",
-      "greeting": {
-        "title": "Guten Abend, {name}!",
-        "subtitle": "Die Termine für morgen im Überblick",
-        "icon": "moon"
-      },
-      "calendar_scope": "tomorrow",
-      "cards": [
-        { "type": "greeting" },
-        { "type": "calendar", "title": "Termine morgen", "max_events": 5 },
-        { "type": "weather", "forecast_days": 3 },
-        { "type": "humidity", "title": "Luftfeuchtigkeit" }
+      "greetings": [
+        "Guten Abend!",
+        "Schönen Feierabend!",
+        "Gemütlichen Abend!"
       ],
       "sleep_mode": {
         "enabled": true,
@@ -132,18 +152,13 @@
     },
     {
       "id": "night",
-      "name": "Nacht-Dashboard",
+      "name": "Nacht",
       "start_time": "22:30",
       "end_time": "06:00",
-      "greeting": {
-        "title": "Gute Nacht, {name}",
-        "subtitle": "Gute Erholung · Aktualisierung am Morgen",
-        "icon": "moon"
-      },
-      "calendar_scope": "tomorrow",
-      "cards": [
-        { "type": "greeting" },
-        { "type": "weather", "forecast_days": 1 }
+      "greetings": [
+        "Gute Nacht!",
+        "Schlaf gut!",
+        "Träum was Schönes!"
       ],
       "sleep_mode": {
         "enabled": true,
