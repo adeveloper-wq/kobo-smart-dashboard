@@ -6,7 +6,7 @@
     "enable_builder": true
   },
   "user": {
-    "name": "User"
+    "name": "Benutzer"
   },
   "weather": {
     "enabled": true,
@@ -22,30 +22,30 @@
     "cache_ttl_seconds": 900,
     "fallback_events": [
       {
-        "title": "Team Morning Standup",
+        "title": "Team Morgen-Standup",
         "time": "09:30 - 10:00",
-        "date_label": "Today",
+        "date_label": "Heute",
         "location": "Google Meet",
         "is_all_day": false
       },
       {
-        "title": "Project Architecture Review",
+        "title": "Projekt Architektur-Review",
         "time": "14:00 - 15:30",
-        "date_label": "Today",
-        "location": "Room 402",
+        "date_label": "Heute",
+        "location": "Raum 402",
         "is_all_day": false
       },
       {
-        "title": "Dentist Appointment",
+        "title": "Zahnarzttermin",
         "time": "10:15 - 11:00",
-        "date_label": "Tomorrow",
-        "location": "Medical Center",
+        "date_label": "Morgen",
+        "location": "Praxis Dr. Schmidt",
         "is_all_day": false
       },
       {
-        "title": "Sprint Planning",
+        "title": "Sprint-Planung",
         "time": "15:00 - 16:30",
-        "date_label": "Tomorrow",
+        "date_label": "Morgen",
         "location": "Google Meet",
         "is_all_day": false
       }
@@ -56,25 +56,25 @@
     "accent_color": "#D97706",
     "card_corner_radius": 18.0,
     "time_format": "24h",
-    "language": "en"
+    "language": "de"
   },
   "schedules": [
     {
       "id": "morning",
-      "name": "Morning Dashboard",
+      "name": "Morgen-Dashboard",
       "start_time": "06:00",
       "end_time": "12:00",
       "greeting": {
-        "title": "Good morning, {name}!",
-        "subtitle": "Here is your plan for today",
+        "title": "Guten Morgen, {name}!",
+        "subtitle": "Dein Tagesplan für heute",
         "icon": "sun"
       },
       "calendar_scope": "today",
       "cards": [
         { "type": "greeting" },
         { "type": "weather", "forecast_days": 3 },
-        { "type": "calendar", "title": "Today's Schedule", "max_events": 5 },
-        { "type": "humidity", "title": "Humidity" }
+        { "type": "calendar", "title": "Heutige Termine", "max_events": 5 },
+        { "type": "humidity", "title": "Luftfeuchtigkeit" }
       ],
       "sleep_mode": {
         "enabled": true,
@@ -84,20 +84,20 @@
     },
     {
       "id": "afternoon",
-      "name": "Afternoon Dashboard",
+      "name": "Nachmittag-Dashboard",
       "start_time": "12:00",
       "end_time": "18:00",
       "greeting": {
-        "title": "Good afternoon, {name}!",
-        "subtitle": "Remaining schedule for today",
+        "title": "Guten Tag, {name}!",
+        "subtitle": "Verbleibende Termine für heute",
         "icon": "sun"
       },
       "calendar_scope": "today_remaining",
       "cards": [
         { "type": "greeting" },
-        { "type": "calendar", "title": "Today's Upcoming", "max_events": 4 },
+        { "type": "calendar", "title": "Heutige Termine", "max_events": 4 },
         { "type": "weather", "forecast_days": 3 },
-        { "type": "humidity", "title": "Humidity" }
+        { "type": "humidity", "title": "Luftfeuchtigkeit" }
       ],
       "sleep_mode": {
         "enabled": true,
@@ -107,20 +107,20 @@
     },
     {
       "id": "evening",
-      "name": "Evening Dashboard",
+      "name": "Abend-Dashboard",
       "start_time": "18:00",
       "end_time": "22:30",
       "greeting": {
-        "title": "Good evening, {name}!",
-        "subtitle": "Tomorrow's agenda at a glance",
+        "title": "Guten Abend, {name}!",
+        "subtitle": "Die Termine für morgen im Überblick",
         "icon": "moon"
       },
       "calendar_scope": "tomorrow",
       "cards": [
         { "type": "greeting" },
-        { "type": "calendar", "title": "Tomorrow's Agenda", "max_events": 5 },
+        { "type": "calendar", "title": "Termine morgen", "max_events": 5 },
         { "type": "weather", "forecast_days": 3 },
-        { "type": "humidity", "title": "Humidity" }
+        { "type": "humidity", "title": "Luftfeuchtigkeit" }
       ],
       "sleep_mode": {
         "enabled": true,
@@ -130,12 +130,12 @@
     },
     {
       "id": "night",
-      "name": "Night Dashboard",
+      "name": "Nacht-Dashboard",
       "start_time": "22:30",
       "end_time": "06:00",
       "greeting": {
-        "title": "Good night, {name}",
-        "subtitle": "Sleep well · Updating in the morning",
+        "title": "Gute Nacht, {name}",
+        "subtitle": "Gute Erholung · Aktualisierung am Morgen",
         "icon": "moon"
       },
       "calendar_scope": "tomorrow",

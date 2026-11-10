@@ -80,7 +80,7 @@ backend:
 
 device:
   orientation: "portrait"             # "portrait" or "landscape"
-  sleep_after_secs: 60                # Deep sleep after 1 min idle
+  sleep_after_secs: 180               # Deep sleep after 3 min idle
   color_panel: true                   # True for Kaleido color models
 ```
 

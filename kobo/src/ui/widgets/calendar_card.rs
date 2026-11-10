@@ -19,7 +19,7 @@ pub fn render_calendar_card(
     let max_w = rect.w - 2.0 * PAD;
 
     // Card Header Title
-    let header_title = title.unwrap_or("Schedule").to_uppercase();
+    let header_title = title.unwrap_or("Termine").to_uppercase();
     canvas.draw_text_fit(&header_title, x0, y0, type_scale::LABEL, true, theme.text_muted, TextAlign::Left, max_w);
     y0 += type_scale::LABEL + 16.0;
 
@@ -28,7 +28,7 @@ pub fn render_calendar_card(
     y0 += 14.0;
 
     if events.is_empty() {
-        let msg = "No upcoming events scheduled";
+        let msg = "Keine anstehenden Termine";
         canvas.draw_text(msg, x0 + max_w / 2.0, y0 + 20.0, type_scale::BODY, false, theme.text_muted, TextAlign::Center);
         return;
     }
@@ -42,7 +42,7 @@ pub fn render_calendar_card(
         }
 
         // Event Time Badge / Text
-        let time_str = if ev.is_all_day { "All Day" } else { &ev.time };
+        let time_str = if ev.is_all_day { "Ganztägig" } else { &ev.time };
         canvas.draw_text_fit(time_str, x0, y0 + 6.0, type_scale::LABEL, true, theme.accent.solid, TextAlign::Left, time_col_w - 12.0);
 
         // Title and Location

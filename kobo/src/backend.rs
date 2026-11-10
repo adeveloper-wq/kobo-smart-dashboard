@@ -1,8 +1,44 @@
 use crate::config::{AppConfig, CardConfig, PageConfig, ThemeConfig};
-use crate::ha::models::EntityState;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityState {
+    pub entity_id: String,
+    pub state: String,
+    #[serde(default)]
+    pub attributes: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub last_changed: String,
+}
+
+impl EntityState {
+    pub fn get_attr_f32(&self, key: &str) -> Option<f32> {
+        self.attributes.get(key).and_then(|v| {
+            if let Some(f) = v.as_f64() {
+                Some(f as f32)
+            } else if let Some(s) = v.as_str() {
+                s.parse::<f32>().ok()
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn get_attr_str<'a>(&'a self, key: &str) -> Option<&'a str> {
+        self.attributes.get(key).and_then(|v| v.as_str())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ForecastItem {
+    pub datetime: String,
+    pub condition: String,
+    pub temperature: f32,
+    #[serde(default)]
+    pub templow: Option<f32>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackendSleepInfo {
@@ -116,7 +152,7 @@ impl BackendClient {
         // Replace pages with a single page containing the backend-defined cards
         config.pages = vec![PageConfig {
             id: "backend_main".to_string(),
-            title: "Today".to_string(),
+            title: "Heute".to_string(),
             icon: "home".to_string(),
             cards: payload.cards.clone(),
         }];

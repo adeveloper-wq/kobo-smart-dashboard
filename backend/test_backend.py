@@ -72,7 +72,7 @@ class TestCalendarParser(unittest.TestCase):
         tom_ev = calendar_parser.filter_and_format_events(events, scope="tomorrow", reference_dt=ref_dt)
         self.assertEqual(len(tom_ev), 1)
         self.assertEqual(tom_ev[0]["title"], "Tomorrow Dentist")
-        self.assertEqual(tom_ev[0]["date_label"], "Tomorrow")
+        self.assertEqual(tom_ev[0]["date_label"], "Morgen")
 
 
 class TestServerLogic(unittest.TestCase):

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kobo Dashboard Backend Config Builder</title>
+  <title>Kobo Dashboard Backend - Config Builder</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -103,10 +103,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+      padding: 24px;
     }
 
     .tabs {
@@ -114,88 +111,81 @@
       gap: 8px;
       border-bottom: 1px solid var(--border);
       padding-bottom: 12px;
+      margin-bottom: 20px;
+      overflow-x: auto;
     }
     .tab-btn {
       background: transparent;
       color: var(--text-muted);
       border-radius: 6px;
       padding: 8px 14px;
+      font-size: 14px;
     }
-    .tab-btn.active {
-      background: var(--surface-alt);
-      color: var(--text);
-    }
+    .tab-btn:hover { background: var(--surface-alt); color: var(--text); }
+    .tab-btn.active { background: var(--primary); color: #000; font-weight: 700; }
 
     .form-group {
+      margin-bottom: 18px;
       display: flex;
       flex-direction: column;
       gap: 6px;
-      margin-bottom: 14px;
     }
     .form-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
+      gap: 16px;
+      margin-bottom: 12px;
     }
+
     label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
     input, select, textarea {
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 9px 12px;
+      padding: 10px 12px;
       color: var(--text);
       font-size: 14px;
       outline: none;
+      transition: border-color 0.15s;
     }
     input:focus, select:focus, textarea:focus { border-color: var(--primary); }
-    textarea { font-family: monospace; min-height: 80px; resize: vertical; }
+    textarea { resize: vertical; min-height: 80px; }
 
-    /* Schedule Cards */
     .schedule-item {
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      position: relative;
+      margin-bottom: 16px;
     }
     .schedule-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--surface-alt);
     }
-    .schedule-title {
-      font-weight: 700;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .badge-now {
-      background: var(--primary);
-      color: #000;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
+    .schedule-title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
 
-    /* Kobo Screen Preview */
+    /* Kobo Screen Simulator */
     .preview-sticky {
       position: sticky;
-      top: 88px;
+      top: 90px;
       display: flex;
       flex-direction: column;
       gap: 16px;
     }
     .preview-controls {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
+    .preview-controls select { padding: 6px 12px; }
 
     .kobo-bezel {
       background: #111;
@@ -216,7 +206,7 @@
       position: relative;
     }
 
-    /* Screen Elements */
+    /* Screen Elements (Dashboard preview) */
     .ks-header {
       display: flex;
       justify-content: space-between;
@@ -311,7 +301,7 @@
       <div class="brand-icon">K</div>
       <div class="brand-title">
         <h1>Kobo Dashboard Backend</h1>
-        <p>Dynamic Multi-Schedule Config Builder</p>
+        <p>Multi-Schedule Config Builder</p>
       </div>
     </div>
     <div class="header-actions">
@@ -321,7 +311,7 @@
       </div>
       <button class="btn-secondary" onclick="refreshPreview()">🔄 Refresh</button>
       <button class="btn-primary" onclick="saveConfig()">💾 Save Config</button>
-      <button class="btn-secondary" onclick="quitBuilder()" title="Shut down the builder">❌ Quit</button>
+      <button class="btn-secondary" onclick="quitBuilder()" title="Shut down the builder server">❌ Quit</button>
     </div>
   </header>
 
@@ -347,7 +337,7 @@
         </div>
 
         <div id="schedulesContainer" style="display: flex; flex-direction: column; gap: 16px;">
-          <!-- Rendered dynamically -->
+          <!-- Dynamically rendered -->
         </div>
       </div>
 
@@ -424,7 +414,7 @@
       <!-- Tab 4: Raw JSON -->
       <div id="tab-json" style="display: none;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <label>backend_config.json</label>
+          <label>config.json</label>
           <button class="btn-secondary btn-sm" onclick="formatRawJson()">Format JSON</button>
         </div>
         <textarea id="rawJsonText" style="min-height: 480px; font-size: 13px; line-height: 1.4;"></textarea>
@@ -432,7 +422,7 @@
 
     </div>
 
-    <!-- Right Column: Live Simulator -->
+    <!-- Right Column: Live Kobo Screen Simulator -->
     <div class="preview-sticky">
       <div class="preview-controls">
         <label>Live Kobo Screen Preview</label>
@@ -443,7 +433,7 @@
 
       <div class="kobo-bezel">
         <div class="kobo-screen" id="koboScreen">
-          <!-- Dynamic E-Ink Screen Content -->
+          <!-- Dynamic E-Ink Screen Content (Shows the dashboard) -->
           <div class="ks-header">
             <div>
               <div class="ks-clock" id="ksClock">--:--</div>
@@ -458,7 +448,7 @@
           <div class="ks-greeting" id="ksGreeting">
             <div class="ks-greeting-icon" id="ksGreetingIcon">☀️</div>
             <div>
-              <div class="ks-greeting-title" id="ksGreetingTitle">Good day</div>
+              <div class="ks-greeting-title" id="ksGreetingTitle">Guten Tag</div>
               <div class="ks-greeting-sub" id="ksGreetingSub">Loading preview...</div>
             </div>
           </div>
@@ -470,22 +460,22 @@
                 <span class="ks-cond" id="ksCond">--</span>
               </div>
               <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                💧 Humidity: <b id="ksHumidity">--%</b> (<span id="ksHumidityStatus">--</span>)
+                💧 Luftfeuchtigkeit: <b id="ksHumidity">--%</b> (<span id="ksHumidityStatus">--</span>)
               </div>
             </div>
             <div id="ksWeatherIcon" style="font-size: 34px;">⛅</div>
           </div>
 
           <div class="ks-calendar" id="ksCalendar">
-            <div class="ks-cal-title" id="ksCalTitle">Today's Schedule</div>
+            <div class="ks-cal-title" id="ksCalTitle">Termine</div>
             <div id="ksEventsList" style="display: flex; flex-direction: column; gap: 4px;">
               <!-- Events dynamically rendered -->
             </div>
           </div>
 
           <div class="ks-sleep-bar" id="ksSleepBar">
-            <span>🌙 Sleep Mode</span>
-            <span id="ksSleepNote">Next update in 30m</span>
+            <span>🌙 Ruhemodus</span>
+            <span id="ksSleepNote">Nächstes Update in 30 Min.</span>
           </div>
 
         </div>
@@ -633,7 +623,7 @@
         name: "Custom Period",
         start_time: "14:00",
         end_time: "17:00",
-        greeting: { title: "Good day, {name}!", subtitle: "Enjoy your afternoon", icon: "sun" },
+        greeting: { title: "Guten Tag, {name}!", subtitle: "Einen angenehmen Nachmittag", icon: "sun" },
         calendar_scope: "today",
         cards: [{type: "greeting"}, {type: "weather"}, {type: "calendar"}, {type: "humidity"}],
         sleep_mode: { enabled: true, update_interval_seconds: 1800 }
@@ -662,6 +652,7 @@
       currentConfig.theme.mode = document.getElementById('themeMode').value;
       currentConfig.theme.accent_color = document.getElementById('themeAccent').value;
       currentConfig.theme.time_format = document.getElementById('themeTimeFmt').value;
+      currentConfig.theme.language = "de";
     }
 
     function updateScheduleSelect(schedules) {
@@ -694,8 +685,8 @@
 
     function renderEinkScreen(data) {
       const now = new Date(data.generated_at);
-      document.getElementById('ksClock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-      document.getElementById('ksDate').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+      document.getElementById('ksClock').textContent = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false });
+      document.getElementById('ksDate').textContent = now.toLocaleDateString('de-DE', { weekday: 'long', month: 'short', day: 'numeric' });
 
       // Greeting
       if (data.greeting) {
@@ -709,17 +700,17 @@
         document.getElementById('ksTemp').textContent = `${Math.round(data.weather.temperature || 0)}${data.weather.temperature_unit || '°C'}`;
         document.getElementById('ksCond').textContent = data.weather.condition_label || '';
         document.getElementById('ksHumidity').textContent = `${Math.round(data.weather.humidity || 0)}%`;
-        document.getElementById('ksHumidityStatus').textContent = data.weather.humidity_status || 'Comfortable';
+        document.getElementById('ksHumidityStatus').textContent = data.weather.humidity_status || 'Angenehm';
       }
 
       // Calendar
       const eventsList = document.getElementById('ksEventsList');
       eventsList.innerHTML = '';
       const events = data.calendar?.events || [];
-      document.getElementById('ksCalTitle').textContent = (data.calendar?.scope === 'tomorrow') ? "Tomorrow's Agenda" : "Today's Schedule";
+      document.getElementById('ksCalTitle').textContent = (data.calendar?.scope === 'tomorrow') ? "Termine morgen" : "Heutige Termine";
 
       if (events.length === 0) {
-        eventsList.innerHTML = '<div style="font-size: 12px; color: #777; padding: 12px 0; text-align: center;">No upcoming events</div>';
+        eventsList.innerHTML = '<div style="font-size: 12px; color: #777; padding: 12px 0; text-align: center;">Keine anstehenden Termine</div>';
       } else {
         events.forEach(ev => {
           const item = document.createElement('div');
@@ -734,13 +725,12 @@
 
       // Sleep Bar
       if (data.sleep) {
-        document.getElementById('ksSleepNote').textContent = data.sleep.sleep_note || 'Sleep mode active';
+        document.getElementById('ksSleepNote').textContent = data.sleep.sleep_note || 'Ruhemodus aktiv';
       }
     }
 
     async function saveConfig() {
       syncFormToConfig();
-      // If on raw JSON tab, validate that
       const jsonTab = document.getElementById('tab-json');
       if (jsonTab.style.display !== 'none') {
         try {
@@ -788,7 +778,7 @@
     }
 
     async function quitBuilder() {
-      if (!confirm("Stop the builder server?")) return;
+      if (!confirm("Shut down the builder server?")) return;
       try {
         await fetch('/api/shutdown', { method: 'POST' });
       } catch (e) {}

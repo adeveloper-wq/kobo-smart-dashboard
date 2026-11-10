@@ -72,7 +72,7 @@ def parse_ics_events(ics_content: str, local_tz: Optional[timezone] = None) -> L
                 )
 
                 if dtstart:
-                    summary = current.get('SUMMARY', 'Untitled Event')
+                    summary = current.get('SUMMARY', 'Termin ohne Titel')
                     # Unescape commas, semicolons, backslashes
                     summary = summary.replace('\\,', ',').replace('\\;', ';').replace('\\\\', '\\').replace('\\n', ' ')
                     location = current.get('LOCATION', '').replace('\\,', ',').replace('\\;', ';')
@@ -146,7 +146,7 @@ def filter_and_format_events(
         if include:
             # Format time string
             if ev['is_all_day']:
-                time_str = 'All Day'
+                time_str = 'Ganztägig'
             else:
                 time_str = local_start.strftime('%H:%M')
                 if local_end and local_end != local_start:
@@ -154,11 +154,13 @@ def filter_and_format_events(
 
             # Format date badge
             if ev_date == ref_date:
-                date_label = 'Today'
+                date_label = 'Heute'
             elif ev_date == tomorrow_date:
-                date_label = 'Tomorrow'
+                date_label = 'Morgen'
             else:
-                date_label = ev_date.strftime('%a, %b %d')
+                german_weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+                wd = german_weekdays[ev_date.weekday()]
+                date_label = f"{wd}, {ev_date.day}.{ev_date.month}."
 
             filtered.append({
                 'title': ev['title'],

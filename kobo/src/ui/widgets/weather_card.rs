@@ -1,6 +1,6 @@
+use crate::backend::{EntityState, ForecastItem};
 use crate::display::{Canvas, TextAlign};
 use crate::i18n;
-use crate::ha::models::{EntityState, ForecastItem};
 use crate::ui::layout::{InteractiveTarget, Rect, UiAction};
 use crate::ui::theme::Theme;
 use crate::ui::widgets::{draw_card, type_scale, PAD};

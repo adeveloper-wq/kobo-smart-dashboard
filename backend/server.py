@@ -116,10 +116,10 @@ def find_active_schedule(config: dict, now: datetime) -> dict:
     if not schedules:
         return {
             "id": "default",
-            "name": "Default Dashboard",
+            "name": "Standard-Dashboard",
             "start_time": "00:00",
             "end_time": "23:59",
-            "greeting": {"title": "Hello, {name}!", "subtitle": "Welcome to your dashboard", "icon": "sun"},
+            "greeting": {"title": "Hallo, {name}!", "subtitle": "Willkommen auf deinem Dashboard", "icon": "sun"},
             "calendar_scope": "today",
             "cards": [{"type": "greeting"}, {"type": "weather"}, {"type": "calendar"}, {"type": "humidity"}],
             "sleep_mode": {"enabled": True, "update_interval_seconds": 1800}
@@ -190,7 +190,7 @@ def calculate_next_update(config: dict, schedule: dict, now: datetime, next_even
         "enabled": enabled,
         "sleep_wake_secs": wake_seconds,
         "next_update_at": wake_dt.isoformat(),
-        "sleep_note": f"Next update at {formatted_wake}",
+        "sleep_note": f"Nächstes Update um {formatted_wake}",
         "wake_time_formatted": formatted_wake
     }
 
@@ -253,10 +253,10 @@ def get_calendar_events(config: dict, scope: str, now: datetime) -> tuple[list, 
         if not raw_events:
             fallbacks = cal_cfg.get("fallback_events", [])
             for item in fallbacks:
-                is_tomorrow = (item.get("date_label") == "Tomorrow")
+                is_tomorrow = (item.get("date_label") in ("Tomorrow", "Morgen"))
                 ev_date = (now + timedelta(days=1)).date() if is_tomorrow else now.date()
                 raw_events.append({
-                    "title": item.get("title", "Event"),
+                    "title": item.get("title", "Termin"),
                     "start": datetime.combine(ev_date, dtime(9, 0), tz),
                     "end": datetime.combine(ev_date, dtime(10, 0), tz),
                     "location": item.get("location", ""),
@@ -304,15 +304,21 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
     sleep_info = calculate_next_update(config, schedule, now, next_event_dt)
 
     # 4. Format Greeting
-    user_name = config.get("user", {}).get("name", "User")
+    user_name = config.get("user", {}).get("name", "Benutzer")
     raw_greeting = schedule.get("greeting", {})
-    title_tpl = raw_greeting.get("title", "Hello, {name}!")
+    title_tpl = raw_greeting.get("title", "Hallo, {name}!")
     title = title_tpl.replace("{name}", user_name)
 
     subtitle = raw_greeting.get("subtitle", "")
     if "{date}" in subtitle or not subtitle:
-        date_str = now.strftime("%A, %B %d")
-        subtitle = f"{date_str} · {len(calendar_events)} events scheduled"
+        german_weekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+        german_months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"]
+        wd = german_weekdays[now.weekday()]
+        mo = german_months[now.month - 1]
+        date_str = f"{wd}, {now.day}. {mo}"
+        count = len(calendar_events)
+        event_text = "1 Termin geplant" if count == 1 else f"{count} Termine geplant"
+        subtitle = f"{date_str} · {event_text}"
 
     greeting_data = {
         "title": title,
@@ -336,12 +342,12 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
         elif c_type == "weather":
             resolved_cards.append({
                 "type": "weather",
-                "title": c.get("title", "Weather"),
+                "title": c.get("title", "Wetter"),
                 "forecast_days": c.get("forecast_days", 3),
                 "data": weather_data
             })
         elif c_type == "calendar":
-            calendar_title = c.get("title", "Calendar")
+            calendar_title = c.get("title", "Termine")
             resolved_cards.append({
                 "type": "calendar",
                 "title": calendar_title,
@@ -351,10 +357,10 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
         elif c_type == "humidity":
             resolved_cards.append({
                 "type": "humidity",
-                "title": c.get("title", "Humidity"),
+                "title": c.get("title", "Luftfeuchtigkeit"),
                 "value": f"{weather_data.get('humidity', 50):.0f}",
                 "unit": "%",
-                "status": weather_data.get("humidity_status", "Comfortable"),
+                "status": weather_data.get("humidity_status", "Angenehm"),
                 "icon": "droplet"
             })
         else:
@@ -376,7 +382,7 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
             "accent_color": theme_cfg.get("accent_color", "#D97706"),
             "card_corner_radius": theme_cfg.get("card_corner_radius", 18.0),
             "time_format": theme_cfg.get("time_format", "24h"),
-            "language": theme_cfg.get("language", "en")
+            "language": theme_cfg.get("language", "de")
         },
         "greeting": greeting_data,
         "weather": weather_data,

@@ -10,42 +10,42 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 
-# Map WMO weather codes to conditions and icons used by Kobo dashboard
+# Map WMO weather codes to conditions and German descriptions used by Kobo dashboard
 WMO_CODE_MAP = {
-    0: ("sunny", "Clear sky"),
-    1: ("sunny", "Mainly clear"),
-    2: ("partly_cloudy", "Partly cloudy"),
-    3: ("cloudy", "Overcast"),
-    45: ("fog", "Foggy"),
-    48: ("fog", "Depositing rime fog"),
-    51: ("rainy", "Light drizzle"),
-    53: ("rainy", "Moderate drizzle"),
-    55: ("rainy", "Dense drizzle"),
-    56: ("rainy", "Freezing drizzle"),
-    57: ("rainy", "Dense freezing drizzle"),
-    61: ("rainy", "Slight rain"),
-    63: ("rainy", "Moderate rain"),
-    65: ("rainy", "Heavy rain"),
-    66: ("rainy", "Freezing rain"),
-    67: ("rainy", "Heavy freezing rain"),
-    71: ("snowy", "Slight snow fall"),
-    73: ("snowy", "Moderate snow fall"),
-    75: ("snowy", "Heavy snow fall"),
-    77: ("snowy", "Snow grains"),
-    80: ("rainy", "Slight rain showers"),
-    81: ("rainy", "Moderate rain showers"),
-    82: ("rainy", "Violent rain showers"),
-    85: ("snowy", "Slight snow showers"),
-    86: ("snowy", "Heavy snow showers"),
-    95: ("lightning", "Thunderstorm"),
-    96: ("lightning", "Thunderstorm with hail"),
-    99: ("lightning", "Heavy thunderstorm with hail"),
+    0: ("sunny", "Klarer Himmel"),
+    1: ("sunny", "Überwiegend klar"),
+    2: ("partly_cloudy", "Teilweise bewölkt"),
+    3: ("cloudy", "Bedeckt"),
+    45: ("fog", "Nebel"),
+    48: ("fog", "Reifnebel"),
+    51: ("rainy", "Leichter Nieselregen"),
+    53: ("rainy", "Mäßiger Nieselregen"),
+    55: ("rainy", "Dichter Nieselregen"),
+    56: ("rainy", "Gefrierender Nieselregen"),
+    57: ("rainy", "Starker gefrierender Nieselregen"),
+    61: ("rainy", "Leichter Regen"),
+    63: ("rainy", "Mäßiger Regen"),
+    65: ("rainy", "Starker Regen"),
+    66: ("rainy", "Gefrierender Regen"),
+    67: ("rainy", "Starker gefrierender Regen"),
+    71: ("snowy", "Leichter Schneefall"),
+    73: ("snowy", "Mäßiger Schneefall"),
+    75: ("snowy", "Starker Schneefall"),
+    77: ("snowy", "Schneegriesel"),
+    80: ("rainy", "Leichte Regenschauer"),
+    81: ("rainy", "Mäßige Regenschauer"),
+    82: ("rainy", "Heftige Regenschauer"),
+    85: ("snowy", "Leichte Schneeschauer"),
+    86: ("snowy", "Starke Schneeschauer"),
+    95: ("lightning", "Gewitter"),
+    96: ("lightning", "Gewitter mit Hagel"),
+    99: ("lightning", "Schweres Gewitter mit Hagel"),
 }
 
 
 def get_condition_from_wmo(code: int) -> tuple[str, str]:
     """Returns (condition_key, human_description)."""
-    return WMO_CODE_MAP.get(code, ("cloudy", "Cloudy"))
+    return WMO_CODE_MAP.get(code, ("cloudy", "Bewölkt"))
 
 
 def fetch_open_meteo_weather(
@@ -110,15 +110,15 @@ def fetch_open_meteo_weather(
 
     unit_symbol = "°C" if temperature_unit == "celsius" else "°F"
 
-    # Evaluate humidity comfort level
+    # Evaluate humidity comfort level (German)
     if humidity < 35:
-        humidity_status = "Dry"
+        humidity_status = "Trocken"
     elif humidity <= 60:
-        humidity_status = "Comfortable"
+        humidity_status = "Angenehm"
     elif humidity <= 70:
-        humidity_status = "Humid"
+        humidity_status = "Feucht"
     else:
-        humidity_status = "Very Humid"
+        humidity_status = "Sehr feucht"
 
     return {
         "condition": condition_key,
@@ -140,12 +140,12 @@ def get_mock_weather(temperature_unit: str = "celsius") -> Dict[str, Any]:
     today = datetime.now().strftime("%Y-%m-%d")
     return {
         "condition": "partly_cloudy",
-        "condition_label": "Partly Cloudy",
+        "condition_label": "Teilweise bewölkt",
         "temperature": 21.5,
         "temperature_unit": unit,
         "feels_like": 21.0,
         "humidity": 52.0,
-        "humidity_status": "Comfortable",
+        "humidity_status": "Angenehm",
         "wind_speed": 12.0,
         "wind_unit": "km/h",
         "forecast": [

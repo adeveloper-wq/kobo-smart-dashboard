@@ -21,7 +21,7 @@ pub fn render_humidity_card(
 
     draw_icon_badge(canvas, theme, x0, y0, badge_d, "droplet", theme.cool, false);
 
-    let title_text = title.unwrap_or("Humidity");
+    let title_text = title.unwrap_or("Luftfeuchtigkeit");
     canvas.draw_text(title_text, x0 + badge_d + 16.0, y0 + 12.0, type_scale::LABEL, true, theme.text_muted, TextAlign::Left);
 
     let val_y = y0 + badge_d + 14.0;

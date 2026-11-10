@@ -31,7 +31,7 @@ pub fn render_greeting_card(
     let tx = x0 + badge_d + 20.0;
     let max_w = rect.x + rect.w - PAD - tx;
 
-    let title_text = title.unwrap_or("Welcome");
+    let title_text = title.unwrap_or("Willkommen");
     let sub_text = subtitle.unwrap_or("");
 
     let title_size = if rect.w >= 600.0 { type_scale::TITLE + 4.0 } else { type_scale::TITLE };

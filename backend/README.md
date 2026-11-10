@@ -102,53 +102,23 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-3. Enable and start:
+3. Enable and start the service:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now kobo-dashboard.service
+sudo systemctl enable kobo-dashboard
+sudo systemctl start kobo-dashboard
 ```
 
 Check status:
 ```bash
-sudo systemctl status kobo-dashboard.service
+sudo systemctl status kobo-dashboard
 ```
 
 ---
 
-## Configuring the Kobo E-Reader
+## Running Tests
 
-In the Kobo's config file (`/mnt/onboard/.kobo-ha/config.yaml` or through the desktop launcher):
-
-```yaml
-backend:
-  url: "http://192.168.1.100:8000"   # IP of your Ubuntu server
-  enabled: true
-
-device:
-  sleep_after_secs: 60               # Sleeps after 1 min idle
-```
-
-Or pass `--backend` when running the Kobo binary:
+Run the test suite:
 ```bash
-./kobo-ha-dashboard --device --backend http://192.168.1.100:8000
-```
-
----
-
-## API Endpoints
-
-- `GET /api/dashboard`: Main endpoint polled by the Kobo reader. Returns the resolved layout, greetings, weather, calendar, and sleep parameters.
-- `GET /api/preview?schedule=<id>`: Preview endpoint for specific schedules (morning, afternoon, evening, night).
-- `GET /api/config`: Returns the current `config.json`.
-- `POST /api/config`: Saves updated configuration JSON.
-- `GET /api/status`: Health check, active schedule name, and server time.
-- `GET /`: Serves the browser-based Config Builder web UI.
-
----
-
-## Testing
-
-Run the included unit test suite:
-```bash
-python3 backend/test_backend.py
+python3 test_backend.py
 ```

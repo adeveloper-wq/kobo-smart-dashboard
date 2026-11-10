@@ -39,7 +39,7 @@ The system is split into two lightweight, decoupled components:
 1. **[Backend Server (`backend/`)](backend/README.md)**:
    - Written in pure Python using **only the standard library** (runs on Ubuntu / Linux / macOS / Windows with no `pip install` dependencies).
    - Fetches your Google Calendar events and Open-Meteo weather/humidity data.
-   - Dynamically adapts to the time of day: in the morning it shows today's schedule; in the evening it automatically switches to tomorrow's agenda.
+   - Dynamically adapts to the time of day: in the morning it serves today's schedule; in the evening it automatically switches to tomorrow's agenda.
    - Precalculates the exact sleep interval so the Kobo only wakes up when a refresh is necessary.
    - Includes a browser-based visual configuration builder (`builder.py`).
 

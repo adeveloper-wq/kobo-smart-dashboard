@@ -5,28 +5,25 @@ mod config;
 mod display;
 mod frontlight;
 mod i18n;
-mod ha;
 mod input;
 mod models;
 mod paths;
 mod power;
-mod setup;
-mod simulator;
 mod ui;
 
-use clap::{Parser, Subcommand};
+use backend::{BackendClient, EntityState};
+use clap::Parser;
 use config::AppConfig;
 use display::{create_framebuffer, Canvas, Refresh};
-use ha::HaClient;
 use input::{InputEvent, TouchDriver, TouchMapping};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use ui::layout::UiAction;
 use ui::ScreenRenderer;
 
-/// Log timestamps in local time (the Kobo's TZ, as the clock on screen),
-/// with the offset, so they line up with launch.sh's `date` line.
+/// Log timestamps in local time (matching launch.sh)
 struct LocalTime;
 
 impl tracing_subscriber::fmt::time::FormatTime for LocalTime {
@@ -39,23 +36,12 @@ impl tracing_subscriber::fmt::time::FormatTime for LocalTime {
 #[command(
     name = "kobo-ha-dashboard",
     version,
-    about = "Home Assistant dashboard for Kobo e-readers. Run without arguments on a computer to open the setup tool."
+    about = "Dashboard for Kobo e-readers powered by Python backend"
 )]
 struct Args {
-    #[command(subcommand)]
-    command: Option<Command>,
-
     /// Path to YAML configuration file
-    #[arg(short, long, global = true)]
-    config: Option<PathBuf>,
-
-    /// Run the interactive desktop simulator instead of the setup tool
     #[arg(short, long)]
-    simulator: bool,
-
-    /// Port for the simulator / setup web server
-    #[arg(short, long, default_value_t = 3000, global = true)]
-    port: u16,
+    config: Option<PathBuf>,
 
     /// Force hardware device mode using Linux framebuffer
     #[arg(short, long)]
@@ -69,32 +55,13 @@ struct Args {
     #[arg(long)]
     backend: Option<String>,
 
-    /// Render a single frame and exit (useful for cron/batch mode)
+    /// Render a single frame and exit
     #[arg(long)]
     once: bool,
 }
 
-#[derive(Subcommand, Debug)]
-enum Command {
-    /// Open the setup tool: connect Home Assistant, design pages, install to a Kobo
-    Setup {
-        /// Don't open a browser window automatically
-        #[arg(long)]
-        no_browser: bool,
-
-        /// Path to the Kobo (ARM) build to install
-        #[arg(long)]
-        kobo_binary: Option<PathBuf>,
-    },
-}
-
 /// Ignore taps arriving faster than this (e-ink ghost/bounce protection)
 const TAP_DEBOUNCE: Duration = Duration::from_millis(350);
-/// For this long after a tap, pushed updates are drawn right away (so a
-/// toggled light shows its new state). Otherwise they wait for the next
-/// minute tick: a busy sensor can push every few seconds, and redrawing for
-/// each one keeps the CPU and the panel busy all the time.
-const LIVE_REDRAW_WINDOW: Duration = Duration::from_secs(30);
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -108,25 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let args = Args::parse();
 
-    let is_kobo = cfg!(target_os = "linux") && Path::new("/mnt/onboard/.kobo").exists();
-
-    // Setup tool: explicit subcommand, or plain launch on a computer.
-    let wants_setup = matches!(args.command, Some(Command::Setup { .. }))
-        || (args.command.is_none() && !args.simulator && !args.device && !args.once && !is_kobo);
-    if wants_setup {
-        let (no_browser, kobo_binary) = match args.command {
-            Some(Command::Setup { no_browser, kobo_binary }) => (no_browser, kobo_binary),
-            None => (false, None),
-        };
-        let config_path = args.config.clone().unwrap_or_else(|| {
-            let local = PathBuf::from("config.yaml");
-            if local.exists() { local } else { paths::data_dir().join("config.yaml") }
-        });
-        i18n::set_override_dir(config_path.parent().map(|d| d.join("lang")).as_deref());
-        return setup::start_setup_server(config_path, args.port, !no_browser, kobo_binary).await;
-    }
-
-    // Check multiple candidate locations for config.yaml
+    // Check candidate locations for config.yaml
     let requested = args.config.clone().unwrap_or_else(|| PathBuf::from("config.yaml"));
     let config_path = if requested.exists() {
         requested
@@ -149,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         config.backend.enabled = true;
     }
 
-    // Language and the extra font some languages need
+    // Set dashboard language
     let config_dir = config_path
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
@@ -157,37 +106,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .unwrap_or_else(|| PathBuf::from("."));
     i18n::set_override_dir(Some(&config_dir.join("lang")));
     i18n::set_language(&config.theme.language);
-    display::canvas::load_fallback_font(&paths::font_dirs(&config_dir), i18n::font_for(&config.theme.language).as_deref());
 
-    let ha_client = HaClient::for_app(&config);
+    let backend_client = BackendClient::new(&config.backend.url);
 
     let is_linux_device = cfg!(target_os = "linux") && Path::new(&config.device.fb_device).exists();
-    let run_as_device = !args.simulator && (args.device || is_linux_device);
+    let run_as_device = args.device || is_linux_device;
 
     if !run_as_device {
-        let ha_init = ha_client.clone();
-        tokio::spawn(async move {
-            let _ = ha_init.refresh_states().await;
-        });
-
-        tracing::info!("Starting in Simulator mode on port {}", args.port);
-        println!();
-        println!("  Kobo HA Dashboard simulator: http://localhost:{}", args.port);
-        println!();
-        simulator::start_simulator_server(config, ha_client, args.port).await?;
+        tracing::info!("Starting in console/test mode. Backend URL: {}", backend_client.url());
+        match backend_client.fetch_dashboard().await {
+            Ok(payload) => {
+                let states = BackendClient::apply_to_app(&payload, &mut config);
+                println!();
+                println!("  Kobo Dashboard: Backend connection successful!");
+                println!("  Backend: {}", backend_client.url());
+                println!("  Status: {}", payload.status);
+                println!("  Cards: {}", payload.cards.len());
+                println!("  States generated: {}", states.len());
+                println!();
+            }
+            Err(e) => {
+                println!();
+                println!("  Warning: Backend unreachable at {}: {}", backend_client.url(), e);
+                println!();
+            }
+        }
         return Ok(());
     }
 
     #[cfg(unix)]
-    return run_device(config, ha_client, args.once).await;
+    return run_device(config, backend_client, args.once).await;
     #[cfg(not(unix))]
-    return Err("Device mode is only available on the Kobo".into());
+    return Err("Device mode is only available on Linux / Kobo".into());
+}
+
+#[cfg(unix)]
+async fn fetch_and_update(
+    backend: &BackendClient,
+    config: &mut AppConfig,
+    renderer: &mut ScreenRenderer,
+) -> (HashMap<String, EntityState>, Duration) {
+    match backend.fetch_dashboard().await {
+        Ok(payload) => {
+            let sleep_secs = payload
+                .sleep
+                .as_ref()
+                .map(|s| s.sleep_wake_secs)
+                .unwrap_or(1800);
+            if let Some(s) = &payload.sleep {
+                renderer.sleep_until = s.sleep_note.clone();
+            }
+            renderer.last_update = Some(chrono::Utc::now());
+            let states = BackendClient::apply_to_app(&payload, config);
+            (states, Duration::from_secs(sleep_secs as u64))
+        }
+        Err(e) => {
+            tracing::warn!("Backend fetch failed: {}", e);
+            (HashMap::new(), Duration::from_secs(1800))
+        }
+    }
 }
 
 #[cfg(unix)]
 async fn run_device(
-    config: AppConfig,
-    ha_client: HaClient,
+    mut config: AppConfig,
+    backend: BackendClient,
     once: bool,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing::info!("Starting on Kobo e-reader device");
@@ -207,14 +190,12 @@ async fn run_device(
     );
     let mut canvas = Canvas::for_screen(width, height);
     let mut renderer = ScreenRenderer::new(&config);
-    let mut active_page = 0;
 
     if once {
-        let _ = ha_client.refresh_states().await;
-        redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
+        let (states, _) = fetch_and_update(&backend, &mut config, &mut renderer).await;
+        renderer.render(&mut canvas, &config, 0, &states, true);
         fb.flush(&canvas, Refresh::Full)?;
         tracing::info!("Single frame rendered and flushed to framebuffer");
-        // Leave the dashboard on screen instead of restoring Nickel's frame.
         std::mem::forget(fb);
         return Ok(());
     }
@@ -231,32 +212,8 @@ async fn run_device(
         },
     );
 
-    // Wakeups: periodic refresh, finished service calls, clock ticks.
     let (wake_tx, mut wake_rx) = tokio::sync::mpsc::channel::<()>(8);
 
-    // Live updates over WebSocket; the loop below only polls when that is
-    // down, and otherwise just refreshes forecasts/graph history now and then.
-    ha_client.spawn_live_updates(wake_tx.clone());
-    {
-        let ha = ha_client.clone();
-        let tx = wake_tx.clone();
-        let interval = Duration::from_secs(config.home_assistant.refresh_interval_secs.max(5));
-        tokio::spawn(async move {
-            loop {
-                if ha.is_live_push() {
-                    ha.refresh_extras_only().await;
-                } else {
-                    let _ = ha.refresh_states().await;
-                }
-                if tx.send(()).await.is_err() {
-                    return;
-                }
-                tokio::time::sleep(interval).await;
-            }
-        });
-    }
-
-    // Battery log, to compare power settings.
     tokio::spawn(async {
         loop {
             power::log_battery();
@@ -268,8 +225,6 @@ async fn run_device(
     let mut sigint = signal(tokio::signal::unix::SignalKind::interrupt());
     let mut sighup = signal(tokio::signal::unix::SignalKind::hangup());
 
-    // Partial updates since the last full refresh; only updates that changed
-    // pixels count, so an unchanged screen never triggers a full flash.
     let mut partials: u32 = 0;
     let mut last_tap = Instant::now() - TAP_DEBOUNCE;
     let mut flush = |fb: &mut Box<dyn display::FramebufferDriver>, canvas: &Canvas, force_full: bool| {
@@ -289,50 +244,39 @@ async fn run_device(
         }
     };
 
-    // Frontlight: header button toggles it; optional auto-off after idle.
     let mut light = frontlight::Frontlight::detect();
     let light_timeout = Duration::from_secs(config.device.frontlight_timeout_secs as u64);
-    // True when the timer (not the user) switched the light off; the next tap
-    // then only wakes the light.
     let mut light_dimmed = false;
     let mut last_activity = Instant::now();
     renderer.frontlight = light.as_ref().map(|l| l.is_on());
-    match (&light, light_timeout.is_zero()) {
-        (None, _) => tracing::info!("Frontlight: not available"),
-        (Some(_), true) => tracing::info!("Frontlight: auto-off disabled (frontlight_timeout_secs = 0)"),
-        (Some(_), false) => tracing::info!("Frontlight: auto-off after {:?} without taps", light_timeout),
-    }
 
-    // Sleep mode: suspend after a while without taps, wake on a timer to
-    // refresh, or on the power button to use the dashboard again.
     let wifi_script = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|d| d.join("wifi.sh")))
         .unwrap_or_else(|| PathBuf::from("/mnt/onboard/.kobo-ha/wifi.sh"));
     let sleep_after = Duration::from_secs(config.device.sleep_after_secs as u64);
-    let sleep_wake = Duration::from_secs(config.device.sleep_wake_secs.max(120) as u64);
+    let mut sleep_wake = Duration::from_secs(config.device.sleep_wake_secs.max(120) as u64);
+
     let mut sleep_enabled = if sleep_after.is_zero() {
         tracing::info!("Sleep mode: disabled (sleep_after_secs = 0)");
         false
     } else if let Some(reason) = power::sleep_unsupported_reason(&wifi_script) {
-        tracing::warn!("Sleep mode: unavailable, {}", reason);
+        tracing::warn!("Sleep mode: unavailable ({})", reason);
         false
     } else {
         tracing::info!("Sleep mode: after {:?} without taps, waking every {:?}", sleep_after, sleep_wake);
         true
     };
-    // The power-button press that wakes the device must not count as "exit".
+
     let mut ignore_power_until = Instant::now();
-    // Sleep rounds in a row where the kernel refused to suspend.
     let mut sleep_failures = 0u32;
-    // The power button asks for sleep right away, like it does in Nickel.
     let mut sleep_requested = false;
     let mut last_power_press = Instant::now() - Duration::from_secs(10);
 
-    {
-        redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
-        flush(&mut fb, &canvas, true);
-    }
+    let (mut current_states, initial_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
+    sleep_wake = initial_sleep;
+    renderer.render(&mut canvas, &config, 0, &current_states, true);
+    flush(&mut fb, &canvas, true);
 
     let mut clock = tokio::time::interval(Duration::from_secs(60));
     clock.tick().await;
@@ -347,6 +291,7 @@ async fn run_device(
         } else {
             sleep_enabled.then(|| tokio::time::Instant::from_std(last_activity + sleep_after))
         };
+
         tokio::select! {
             _ = async {
                 match sleep_deadline {
@@ -356,16 +301,13 @@ async fn run_device(
             } => {
                 sleep_requested = false;
                 if power::is_plugged() {
-                    // Suspending while plugged in hangs MediaTek Kobos; and power isn't an issue.
-                    tracing::info!("Sleep postponed: the Kobo is plugged in");
+                    tracing::info!("Sleep postponed: device is plugged in");
                     last_activity = Instant::now();
                     continue;
                 }
                 tracing::info!("Entering sleep mode");
                 let light_was_on = light.as_ref().map(|l| l.is_on()).unwrap_or(false) || light_dimmed;
                 let mut woke_by_button = false;
-                // Wi-Fi is left off when waking by button, and switched back on
-                // after the dashboard is on screen again.
                 let mut wifi_down = false;
                 if let Some(l) = light.as_mut() {
                     l.set_on(false);
@@ -374,14 +316,12 @@ async fn run_device(
                 loop {
                     let next = ui::widgets::header::now_local(&config.theme)
                         + chrono::Duration::from_std(sleep_wake).unwrap_or_else(|_| chrono::Duration::minutes(15));
-                    renderer.sleep_until = Some(ui::widgets::header::format_time(&next, &config.theme));
-                    redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
+                    let next_time_str = ui::widgets::header::format_time(&next, &config.theme);
+                    let sleep_note_text = format!("{} {}", i18n::t("sleep.next"), next_time_str);
+                    renderer.sleep_until = Some(sleep_note_text);
+                    renderer.render(&mut canvas, &config, 0, &current_states, false);
                     flush(&mut fb, &canvas, true);
-                    // The display controller (hwtcon) refuses to suspend while its
-                    // panel power-off timer runs, a few seconds after the last update
-                    // ("xon off timer pending" in dmesg). With Wi-Fi off and the
-                    // state-extended pause this adds up to about 9 s. A tap or the
-                    // power button meanwhile means "stay awake".
+
                     let wait_until = tokio::time::Instant::now() + Duration::from_secs(7);
                     let mut cancelled = false;
                     while !cancelled {
@@ -407,27 +347,23 @@ async fn run_device(
                         let _ = tokio::task::spawn_blocking(move || power::wifi(&script, true)).await;
                         break;
                     }
-                    // Pressed while Wi-Fi was going down?
                     let mut cancelled = false;
                     while let Some(ev) = touch_driver.try_recv() {
                         cancelled |= wants_awake(&ev, last_power_press, ignore_power_until);
                     }
                     if cancelled {
-                        tracing::info!("Sleep cancelled by a tap or the power button");
+                        tracing::info!("Sleep cancelled while Wi-Fi going down");
                         woke_by_button = true;
                         wifi_down = true;
                         break;
                     }
                     if let Err(e) = power::set_alarm(sleep_wake.as_secs()) {
-                        tracing::warn!("Could not set the wakeup alarm ({}); not suspending", e);
+                        tracing::warn!("Could not set wakeup alarm ({}); not suspending", e);
                         let script = wifi_script.clone();
                         let _ = tokio::task::spawn_blocking(move || power::wifi(&script, true)).await;
                         break;
                     }
-                    // Wall-clock time: monotonic clocks stop while suspended.
                     let alarm_at = chrono::Utc::now() + chrono::Duration::from_std(sleep_wake).unwrap_or_default();
-                    // A refused suspend fails at once (usually the display still
-                    // busy); a few seconds later the kernel takes it.
                     let mut suspended = Err(String::new());
                     for attempt in 1..=3 {
                         suspended = tokio::task::spawn_blocking(power::suspend).await.unwrap_or_else(|e| Err(e.to_string()));
@@ -444,7 +380,6 @@ async fn run_device(
                     sleep_failures = if suspended.is_ok() { 0 } else { sleep_failures + 1 };
                     let woke_early = chrono::Utc::now() < alarm_at - chrono::Duration::seconds(20);
                     if woke_early {
-                        // The press that woke us shows up in the power-key watcher a moment later.
                         ignore_power_until = Instant::now() + Duration::from_secs(5);
                     }
                     match &suspended {
@@ -457,7 +392,6 @@ async fn run_device(
                     }
                     power::sync();
                     woke_by_button = suspended.is_ok() && woke_early;
-                    // Give the display controller a moment after resume before drawing.
                     tokio::time::sleep(Duration::from_millis(1500)).await;
                     touch_driver.drain();
                     if suspended.is_err() || woke_early {
@@ -467,16 +401,17 @@ async fn run_device(
 
                     let script = wifi_script.clone();
                     let wifi_ok = tokio::task::spawn_blocking(move || power::wifi(&script, true)).await.unwrap_or(false);
-                    ha_client.reconnect_now();
                     if wifi_ok {
-                        let _ = tokio::time::timeout(Duration::from_secs(20), ha_client.refresh_states()).await;
+                        let (new_states, new_sleep) = tokio::time::timeout(
+                            Duration::from_secs(20),
+                            fetch_and_update(&backend, &mut config, &mut renderer)
+                        ).await.unwrap_or((current_states.clone(), sleep_wake));
+                        current_states = new_states;
+                        sleep_wake = new_sleep;
                     }
                     power::log_battery();
                 }
                 renderer.sleep_until = None;
-                // Pressing the power button means "I want to use it": light back
-                // on. Otherwise it stays off and the next tap brings it back, as
-                // after the auto-off.
                 light_dimmed = false;
                 if light_was_on {
                     if woke_by_button {
@@ -490,23 +425,18 @@ async fn run_device(
                 }
                 if sleep_failures >= 3 {
                     sleep_enabled = false;
-                    tracing::warn!("Sleep mode: the kernel refused to suspend {} times in a row; staying awake for this session", sleep_failures);
+                    tracing::warn!("Sleep mode: 3 failed attempts in a row, staying awake");
                 }
                 last_activity = Instant::now();
-                // Screen first, so the power button feels immediate; fresh
-                // states follow once Wi-Fi is back.
-                redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
+                renderer.render(&mut canvas, &config, 0, &current_states, !wifi_down);
                 flush(&mut fb, &canvas, true);
                 tracing::info!("Left sleep mode");
                 power::sync();
                 if wifi_down {
                     let script = wifi_script.clone();
-                    let ha = ha_client.clone();
                     let tx = wake_tx.clone();
                     tokio::spawn(async move {
                         if tokio::task::spawn_blocking(move || power::wifi(&script, true)).await.unwrap_or(false) {
-                            ha.reconnect_now();
-                            let _ = tokio::time::timeout(Duration::from_secs(20), ha.refresh_states()).await;
                             let _ = tx.send(()).await;
                         }
                     });
@@ -520,11 +450,11 @@ async fn run_device(
                 }
             } => {
                 if let Some(l) = light.as_mut() {
-                    tracing::info!("No taps for {:?}, switching the light off", light_timeout);
+                    tracing::info!("No taps for {:?}, switching frontlight off", light_timeout);
                     l.set_on(false);
                     light_dimmed = true;
                     renderer.frontlight = Some(false);
-                    redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
+                    renderer.render(&mut canvas, &config, 0, &current_states, true);
                     flush(&mut fb, &canvas, false);
                 }
             }
@@ -533,7 +463,6 @@ async fn run_device(
                 let Some(event) = event else { continue };
                 let (x, y) = match event {
                     InputEvent::PowerButton if Instant::now() < ignore_power_until => continue,
-                    // Press and release can arrive as two events.
                     InputEvent::PowerButton if last_power_press.elapsed() < Duration::from_secs(2) => continue,
                     InputEvent::PowerButton => {
                         last_power_press = Instant::now();
@@ -542,28 +471,24 @@ async fn run_device(
                             sleep_requested = true;
                             continue;
                         }
-                        // No suspend while plugged in (or with sleep mode off):
-                        // the button switches the light instead, like a screen sleep.
                         if let Some(l) = light.as_mut() {
                             let on = !l.is_on();
-                            tracing::info!("Power button pressed: light {} (sleep mode not available now)", if on { "on" } else { "off" });
+                            tracing::info!("Power button pressed: light {}", if on { "on" } else { "off" });
                             l.set_on(on);
                             light_dimmed = !on;
                             renderer.frontlight = Some(on);
                             last_activity = Instant::now();
-                            redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
+                            renderer.render(&mut canvas, &config, 0, &current_states, true);
                             flush(&mut fb, &canvas, false);
                         }
                         continue;
                     }
                     InputEvent::Plugged => {
-                        // Nickel is paused and can't ask "connect to computer?"; give it the screen back.
-                        tracing::info!("Connected to a computer: returning to the Kobo");
+                        tracing::info!("USB cable plugged in: returning to Nickel");
                         break;
                     }
                     InputEvent::PowerSourceChanged => {
-                        // Charging bolt on the battery icon
-                        redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
+                        renderer.render(&mut canvas, &config, 0, &current_states, true);
                         flush(&mut fb, &canvas, false);
                         continue;
                     }
@@ -576,86 +501,52 @@ async fn run_device(
                 last_activity = Instant::now();
                 tracing::debug!("Tap at ({:.0}, {:.0})", x, y);
 
-                // After an automatic switch-off, a tap only brings the light back.
                 if light_dimmed {
                     light_dimmed = false;
                     if let Some(l) = light.as_mut() {
                         l.set_on(true);
                         renderer.frontlight = Some(true);
-                        redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
+                        renderer.render(&mut canvas, &config, 0, &current_states, true);
                         flush(&mut fb, &canvas, false);
                         continue;
                     }
                 }
 
                 let Some(action) = renderer.handle_touch(x, y) else { continue };
-                let mut force_full = false;
-                let service = match action {
+                match action {
                     UiAction::ExitToReader => {
-                        tracing::info!("Exit button tapped");
+                        tracing::info!("Exit tapped");
                         break;
                     }
-                    UiAction::SwitchPage(idx) => {
-                        active_page = idx;
-                        force_full = true;
-                        None
-                    }
                     UiAction::Refresh => {
-                        force_full = true;
-                        let ha = ha_client.clone();
-                        let tx = wake_tx.clone();
-                        tokio::spawn(async move {
-                            let _ = ha.refresh_states().await;
-                            let _ = tx.send(()).await;
-                        });
-                        None
+                        let (new_states, new_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
+                        current_states = new_states;
+                        sleep_wake = new_sleep;
+                        renderer.render(&mut canvas, &config, 0, &current_states, true);
+                        flush(&mut fb, &canvas, true);
                     }
                     UiAction::ToggleFrontlight => {
                         if let Some(l) = light.as_mut() {
                             l.set_on(!l.is_on());
                             renderer.frontlight = Some(l.is_on());
+                            renderer.render(&mut canvas, &config, 0, &current_states, true);
+                            flush(&mut fb, &canvas, false);
                         }
-                        None
                     }
-                    UiAction::ToggleEntity(id) => Some(ha_client.toggle_request(&id)),
-                    UiAction::SetClimateTemp(id, delta) => Some(ha_client.climate_request(&id, delta).await),
-                    UiAction::MediaPlayPause(id) => Some(media("media_play_pause", &id)),
-                    UiAction::MediaNext(id) => Some(media("media_next_track", &id)),
-                    UiAction::MediaPrevious(id) => Some(media("media_previous_track", &id)),
-                    UiAction::ActivateScene(id) => Some(ha_client.activate_request(&id)),
-                };
-
-                if let Some((domain, svc, data)) = service {
-                    // Optimistic local update, then talk to HA in the background
-                    // so the UI never blocks on the network.
-                    ha_client.apply_optimistic(&domain, &svc, &data).await;
-                    let ha = ha_client.clone();
-                    let tx = wake_tx.clone();
-                    tokio::spawn(async move {
-                        if let Err(e) = ha.call_service(&domain, &svc, data).await {
-                            tracing::warn!("{}.{} failed: {}", domain, svc, e);
-                        }
-                        let _ = tx.send(()).await;
-                    });
+                    _ => {}
                 }
-
-                redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
-                flush(&mut fb, &canvas, force_full);
             }
 
             _ = wake_rx.recv() => {
-                // Several entities often change together: draw once for the batch.
-                tokio::time::sleep(Duration::from_millis(400)).await;
-                while wake_rx.try_recv().is_ok() {}
-                // When idle, the minute tick below draws the new states.
-                if last_activity.elapsed() < LIVE_REDRAW_WINDOW {
-                    redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
-                    flush(&mut fb, &canvas, false);
-                }
+                let (new_states, new_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
+                current_states = new_states;
+                sleep_wake = new_sleep;
+                renderer.render(&mut canvas, &config, 0, &current_states, true);
+                flush(&mut fb, &canvas, false);
             }
 
             _ = clock.tick() => {
-                redraw(&mut renderer, &mut canvas, &config, active_page, &ha_client).await;
+                renderer.render(&mut canvas, &config, 0, &current_states, true);
                 flush(&mut fb, &canvas, false);
             }
 
@@ -665,43 +556,22 @@ async fn run_device(
         }
     }
 
-    // Presses meant for us must not put Nickel to sleep once it resumes.
     input::discard_nickel_power_presses();
-    // Leave the light the way Nickel had it, and put its last frame back.
     if let Some(l) = light.as_mut() {
         l.restore();
     }
     fb.restore();
     drop(fb);
     tracing::info!("Dashboard exited cleanly");
-    // Don't wait for in-flight HTTP requests or blocked input threads.
     std::process::exit(0);
 }
 
-/// During the run-up to sleep: does this event mean the user wants the
-/// dashboard? Skips the press that asked for sleep (press and release can
-/// arrive a poll apart) and the one that woke the device.
 fn wants_awake(event: &InputEvent, last_power_press: Instant, ignore_power_until: Instant) -> bool {
     match event {
         InputEvent::PowerButton => last_power_press.elapsed() >= Duration::from_secs(2) && Instant::now() >= ignore_power_until,
         InputEvent::Tap { .. } | InputEvent::Plugged => true,
         InputEvent::PowerSourceChanged => false,
     }
-}
-
-async fn redraw(renderer: &mut ScreenRenderer, canvas: &mut Canvas, config: &AppConfig, page: usize, ha: &HaClient) {
-    let states = ha.get_all_states().await;
-    let is_live = ha.is_connected().await;
-    renderer.last_update = ha.last_update().await;
-    renderer.render(canvas, config, page, &states, is_live);
-}
-
-fn media(service: &str, entity_id: &str) -> (String, String, serde_json::Value) {
-    (
-        "media_player".to_string(),
-        service.to_string(),
-        serde_json::json!({ "entity_id": entity_id }),
-    )
 }
 
 #[cfg(unix)]
