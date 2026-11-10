@@ -1,9 +1,93 @@
-/target
-# Your settings: contain the Home Assistant token
+# ==============================================================================
+# Python
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+ENV/
+env.bak/
+venv.bak/
+
+# Testing & Linters
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ==============================================================================
+# Configuration & User Settings (contain tokens, iCal URLs, coordinates)
+# ==============================================================================
+config.json
+backend/config.json
+config.json.tmp
+backend/config.json.tmp
+
 config.yaml
+kobo/config.yaml
 config.yaml.tmp
+config.yaml.bak
+
+# Keep example templates tracked in git
+!config.example.json
+!backend/config.example.json
+!config.example.yaml
+!kobo/config.example.yaml
+
+# Temporary & backup files
+*.tmp
+*.bak
+*.swp
+*~
 backups/
+
+# Logs
 *.log
-# Built by ./deploy/build-kobo.sh or the release workflow
-/deploy/kobo-ha-dashboard
+*.log.old
+*.old
+
+# ==============================================================================
+# Rust / Kobo Target Builds
+# ==============================================================================
+/target
+kobo/target/
+**/target/
+kobo-ha-dashboard
+deploy/kobo-ha-dashboard
+kobo/deploy/kobo-ha-dashboard
+
+# ==============================================================================
+# OS Metadata
+# ==============================================================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -62,10 +62,22 @@ def get_timezone(tz_name: str) -> timezone:
 
 
 def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> dict:
-    """Load configuration from JSON file."""
+    """Load configuration from JSON file (falls back to config.example.json)."""
     if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-    with open(config_path, "r", encoding="utf-8") as f:
+        example_path = config_path.parent / "config.example.json"
+        if example_path.exists():
+            import shutil
+            try:
+                shutil.copy(example_path, config_path)
+            except Exception:
+                pass
+        if not config_path.exists() and not example_path.exists():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+        path_to_read = config_path if config_path.exists() else example_path
+    else:
+        path_to_read = config_path
+
+    with open(path_to_read, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
