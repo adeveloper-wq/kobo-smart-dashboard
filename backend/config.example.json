@@ -52,8 +52,7 @@
     ]
   },
   "theme": {
-    "mode": "kaleido",
-    "accent_color": "#D97706",
+    "mode": "high_contrast_bw",
     "card_corner_radius": 18.0,
     "time_format": "24h",
     "language": "de"

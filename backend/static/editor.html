@@ -6,17 +6,17 @@
   <title>Kobo Dashboard Backend - Config Builder</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --surface: #1e293b;
-      --surface-alt: #334155;
-      --border: #475569;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --primary: #f59e0b;
-      --primary-hover: #d97706;
-      --success: #10b981;
+      --bg: #09090b;
+      --surface: #18181b;
+      --surface-alt: #27272a;
+      --border: #3f3f46;
+      --text: #fafafa;
+      --text-muted: #a1a1aa;
+      --primary: #ffffff;
+      --primary-hover: #e4e4e7;
+      --success: #22c55e;
       --danger: #ef4444;
-      --radius: 12px;
+      --radius: 10px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -36,15 +36,15 @@
 
     .brand { display: flex; align-items: center; gap: 12px; }
     .brand-icon {
-      background: var(--primary);
-      color: #000;
+      background: #ffffff;
+      color: #000000;
       width: 36px;
       height: 36px;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
+      font-weight: 900;
       font-size: 18px;
     }
     .brand-title h1 { font-size: 18px; font-weight: 700; }
@@ -60,11 +60,11 @@
       border-radius: 20px;
       font-size: 13px;
       font-weight: 500;
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: #27272a;
+      color: #fafafa;
+      border: 1px solid var(--border);
     }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
 
     button {
       padding: 8px 16px;
@@ -78,10 +78,10 @@
       align-items: center;
       gap: 8px;
     }
-    .btn-primary { background: var(--primary); color: #000; }
-    .btn-primary:hover { background: var(--primary-hover); }
-    .btn-secondary { background: var(--surface-alt); color: var(--text); }
-    .btn-secondary:hover { background: var(--border); }
+    .btn-primary { background: #ffffff; color: #000000; font-weight: 700; }
+    .btn-primary:hover { background: #e4e4e7; }
+    .btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #3f3f46; }
     .btn-sm { padding: 4px 10px; font-size: 12px; }
 
     .main-container {
@@ -188,88 +188,100 @@
     .preview-controls select { padding: 6px 12px; }
 
     .kobo-bezel {
-      background: #111;
+      background: #000;
       border-radius: 20px;
       padding: 16px 14px 24px 14px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 0 0 1px #333;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.8), inset 0 0 0 2px #27272a;
     }
     .kobo-screen {
-      background: #faf8f5;
-      color: #1a1a1a;
+      background: #ffffff;
+      color: #000000;
       border-radius: 6px;
       min-height: 560px;
       padding: 18px;
       display: flex;
       flex-direction: column;
       gap: 14px;
-      box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
       position: relative;
     }
 
-    /* Screen Elements (Dashboard preview) */
+    /* Screen Elements (High-contrast B&W Dashboard preview) */
     .ks-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 2px solid #e5e5e5;
+      border-bottom: 2px solid #000;
       padding-bottom: 8px;
     }
-    .ks-clock { font-size: 26px; font-weight: 800; }
-    .ks-date { font-size: 12px; color: #666; font-weight: 600; }
-    .ks-icons { display: flex; gap: 8px; font-size: 12px; color: #555; }
+    .ks-clock { font-size: 26px; font-weight: 800; color: #000; }
+    .ks-date { font-size: 12px; color: #333; font-weight: 600; }
+    .ks-icons { display: flex; gap: 8px; font-size: 12px; color: #000; filter: grayscale(100%); }
 
     .ks-greeting {
-      background: #f0ede8;
-      border: 1px solid #ddd;
-      border-radius: 10px;
+      background: #ffffff;
+      border: 2px solid #000000;
+      border-radius: 18px;
       padding: 14px;
       display: flex;
-      gap: 12px;
+      gap: 14px;
       align-items: center;
     }
-    .ks-greeting-icon { font-size: 32px; }
-    .ks-greeting-title { font-size: 18px; font-weight: 800; color: #111; }
-    .ks-greeting-sub { font-size: 12px; color: #666; margin-top: 2px; }
+    .ks-greeting-icon {
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      border-radius: 50%;
+      border: 2px solid #000000;
+      background: #eeeeee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      filter: grayscale(100%);
+    }
+    .ks-greeting-title { font-size: 18px; font-weight: 800; color: #000; }
+    .ks-greeting-sub { font-size: 12px; color: #333; margin-top: 2px; }
 
     .ks-weather {
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 10px;
+      background: #ffffff;
+      border: 2px solid #000000;
+      border-radius: 18px;
       padding: 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .ks-weather-main { display: flex; align-items: baseline; gap: 8px; }
-    .ks-temp { font-size: 38px; font-weight: 900; }
-    .ks-cond { font-size: 14px; font-weight: 700; color: #444; }
-    .ks-forecast-row { display: flex; gap: 12px; margin-top: 8px; }
-    .ks-fc-day { font-size: 11px; text-align: center; color: #555; }
+    .ks-temp { font-size: 38px; font-weight: 900; color: #000; }
+    .ks-cond { font-size: 14px; font-weight: 700; color: #000; }
+    .ks-forecast-row { display: flex; gap: 12px; margin-top: 8px; filter: grayscale(100%); }
+    .ks-fc-day { font-size: 11px; text-align: center; color: #000; }
 
     .ks-calendar {
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 10px;
+      background: #ffffff;
+      border: 2px solid #000000;
+      border-radius: 18px;
       padding: 14px;
       flex: 1;
       display: flex;
       flex-direction: column;
       gap: 8px;
     }
-    .ks-cal-title { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #888; letter-spacing: 0.5px; }
+    .ks-cal-title { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #000; letter-spacing: 0.5px; }
     .ks-event-item {
       display: flex;
       gap: 10px;
       padding: 6px 0;
-      border-bottom: 1px dashed #eee;
+      border-bottom: 1px dashed #999999;
       font-size: 13px;
+      color: #000;
     }
-    .ks-event-time { font-weight: 700; min-width: 90px; color: #111; font-size: 12px; }
-    .ks-event-title { font-weight: 600; flex: 1; }
+    .ks-event-time { font-weight: 700; min-width: 90px; color: #000; font-size: 12px; }
+    .ks-event-title { font-weight: 600; flex: 1; color: #000; }
 
     .ks-sleep-bar {
-      background: #111;
-      color: #fff;
+      background: #000000;
+      color: #ffffff;
       padding: 8px 12px;
       border-radius: 20px;
       font-size: 12px;
@@ -277,20 +289,22 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      filter: grayscale(100%);
     }
 
     .toast {
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: var(--surface-alt);
+      background: var(--surface);
       color: #fff;
       padding: 12px 20px;
       border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
       display: none;
       z-index: 1000;
-      border-left: 4px solid var(--primary);
+      border: 1px solid var(--border);
+      border-left: 4px solid #ffffff;
     }
   </style>
 </head>
@@ -389,17 +403,13 @@
         <h3 style="margin-bottom: 14px;">Display & E-Ink Appearance</h3>
         <div class="form-row">
           <div class="form-group">
-            <label>Color Mode</label>
-            <select id="themeMode">
-              <option value="kaleido">Kaleido (Color E-Ink)</option>
-              <option value="paper_warm">Paper Warm</option>
-              <option value="high_contrast_bw">High Contrast Black & White</option>
-              <option value="dark">Dark Mode</option>
-            </select>
+            <label>Display Mode</label>
+            <input type="text" value="High Contrast Black & White (Fixed)" disabled style="opacity: 0.8; cursor: not-allowed;">
+            <input type="hidden" id="themeMode" value="high_contrast_bw">
           </div>
           <div class="form-group">
-            <label>Accent Color</label>
-            <input type="color" id="themeAccent" value="#D97706" style="height: 40px; padding: 2px;">
+            <label>Card Corner Radius (px)</label>
+            <input type="number" id="themeRadius" value="18" min="0" max="32" oninput="applyCardRadius(this.value)">
           </div>
           <div class="form-group">
             <label>Time Format</label>
@@ -459,11 +469,11 @@
                 <span class="ks-temp" id="ksTemp">--°</span>
                 <span class="ks-cond" id="ksCond">--</span>
               </div>
-              <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                💧 Luftfeuchtigkeit: <b id="ksHumidity">--%</b> (<span id="ksHumidityStatus">--</span>)
+              <div style="font-size: 12px; color: #000; margin-top: 4px;">
+                <span style="filter: grayscale(100%);">💧</span> Luftfeuchtigkeit: <b id="ksHumidity">--%</b> (<span id="ksHumidityStatus">--</span>)
               </div>
             </div>
-            <div id="ksWeatherIcon" style="font-size: 34px;">⛅</div>
+            <div id="ksWeatherIcon" style="font-size: 34px; filter: grayscale(100%);">⛅</div>
           </div>
 
           <div class="ks-calendar" id="ksCalendar">
@@ -474,7 +484,7 @@
           </div>
 
           <div class="ks-sleep-bar" id="ksSleepBar">
-            <span>🌙 Ruhemodus</span>
+            <span><span style="filter: grayscale(100%);">🌙</span> Ruhemodus</span>
             <span id="ksSleepNote">Nächstes Update in 30 Min.</span>
           </div>
 
@@ -530,11 +540,19 @@
 
       document.getElementById('calIcalUrl').value = (cfg.calendar?.ical_urls || []).join('\n');
 
-      document.getElementById('themeMode').value = cfg.theme?.mode || 'kaleido';
-      document.getElementById('themeAccent').value = cfg.theme?.accent_color || '#D97706';
+      document.getElementById('themeRadius').value = cfg.theme?.card_corner_radius || 18;
       document.getElementById('themeTimeFmt').value = cfg.theme?.time_format || '24h';
+      applyCardRadius(cfg.theme?.card_corner_radius || 18);
 
       renderSchedulesList(cfg.schedules || []);
+    }
+
+    function applyCardRadius(radius) {
+      const val = (radius !== undefined && radius !== '') ? radius : (currentConfig.theme?.card_corner_radius || 18);
+      const r = parseFloat(val) + 'px';
+      document.querySelectorAll('.ks-greeting, .ks-weather, .ks-calendar').forEach(el => {
+        el.style.borderRadius = r;
+      });
     }
 
     function renderSchedulesList(schedules) {
@@ -653,10 +671,11 @@
       currentConfig.calendar.ical_urls = icalLines;
 
       if (!currentConfig.theme) currentConfig.theme = {};
-      currentConfig.theme.mode = document.getElementById('themeMode').value;
-      currentConfig.theme.accent_color = document.getElementById('themeAccent').value;
+      currentConfig.theme.mode = "high_contrast_bw";
+      currentConfig.theme.card_corner_radius = parseFloat(document.getElementById('themeRadius').value) || 18.0;
       currentConfig.theme.time_format = document.getElementById('themeTimeFmt').value;
       currentConfig.theme.language = "de";
+      delete currentConfig.theme.accent_color;
     }
 
     function updateScheduleSelect(schedules) {
@@ -731,6 +750,8 @@
       if (data.sleep) {
         document.getElementById('ksSleepNote').textContent = data.sleep.sleep_note || 'Ruhemodus aktiv';
       }
+
+      applyCardRadius(data.theme?.card_corner_radius);
     }
 
     async function saveConfig() {

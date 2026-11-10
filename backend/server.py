@@ -380,8 +380,7 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
             "end_time": schedule.get("end_time")
         },
         "theme": {
-            "mode": theme_cfg.get("mode", "kaleido"),
-            "accent_color": theme_cfg.get("accent_color", "#D97706"),
+            "mode": "high_contrast_bw",
             "card_corner_radius": theme_cfg.get("card_corner_radius", 18.0),
             "time_format": theme_cfg.get("time_format", "24h"),
             "language": theme_cfg.get("language", "de")

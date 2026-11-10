@@ -27,8 +27,8 @@ device:
   fb_rotation: "auto"
   landscape_rotation: 90
 
-  # Color e-ink panel (Kaleido)
-  color_panel: true
+  # Black and white panel
+  color_panel: false
 
   # Turn frontlight off after N seconds of inactivity (0 = disabled)
   frontlight_timeout_secs: 0
@@ -40,9 +40,8 @@ backend:
   enabled: true
 
 theme:
-  # "kaleido" (color), "high_contrast_bw", "paper_warm" or "dark"
-  mode: "kaleido"
-  accent_color: "#D97706"
+  # High-contrast black and white mode (only supported mode)
+  mode: "high_contrast_bw"
   card_corner_radius: 18.0
   # "24h" or "12h"
   time_format: "24h"

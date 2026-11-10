@@ -64,7 +64,7 @@ pub struct DeviceConfig {
     pub fb_rotation: String,
     #[serde(default = "default_landscape_rotation")]
     pub landscape_rotation: i32,
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub color_panel: bool,
     #[serde(default)]
     pub frontlight_timeout_secs: u32,
@@ -104,7 +104,7 @@ impl Default for DeviceConfig {
             invert_touch_y: false,
             fb_rotation: default_auto(),
             landscape_rotation: default_landscape_rotation(),
-            color_panel: true,
+            color_panel: false,
             frontlight_timeout_secs: 0,
         }
     }
@@ -164,7 +164,7 @@ pub struct ThemeConfig {
 }
 
 fn default_color_mode() -> String {
-    "kaleido".to_string()
+    "high_contrast_bw".to_string()
 }
 fn default_accent_color() -> String {
     "#D97706".to_string()
