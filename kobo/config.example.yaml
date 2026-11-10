@@ -33,14 +33,9 @@ device:
   # Turn frontlight off after N seconds of inactivity (0 = disabled)
   frontlight_timeout_secs: 0
 
-  # Sleep mode: suspend device after N seconds of inactivity
-  # (0 = disabled; active on battery power)
-  sleep_after_secs: 180
-  # Wake up and refresh interval (seconds)
-  sleep_wake_secs: 1800
-
 backend:
-  # URL of the Python backend on your local server (e.g. Ubuntu)
+  # URL of the Python backend on your local server (e.g. Ubuntu).
+  # Deep sleep, wake intervals, and schedules are managed entirely by the backend.
   url: "http://192.168.1.100:8000"
   enabled: true
 

@@ -589,8 +589,12 @@
               <input type="text" value="${s.greeting?.subtitle || ''}" onchange="updateScheduleGreeting(${idx}, 'subtitle', this.value)">
             </div>
             <div class="form-group">
-              <label>Sleep & Refresh (Seconds)</label>
+              <label>Wake Interval (Seconds)</label>
               <input type="number" step="60" value="${s.sleep_mode?.update_interval_seconds || 1800}" onchange="updateScheduleSleep(${idx}, 'update_interval_seconds', parseInt(this.value))">
+            </div>
+            <div class="form-group">
+              <label>Idle Sleep Timeout (Seconds)</label>
+              <input type="number" step="5" value="${s.sleep_mode?.sleep_after_secs || 30}" onchange="updateScheduleSleep(${idx}, 'sleep_after_secs', parseInt(this.value))">
             </div>
           </div>
         `;

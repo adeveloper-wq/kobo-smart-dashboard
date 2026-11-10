@@ -68,15 +68,8 @@ pub struct DeviceConfig {
     pub color_panel: bool,
     #[serde(default)]
     pub frontlight_timeout_secs: u32,
-    #[serde(default)]
-    pub sleep_after_secs: u32,
-    #[serde(default = "default_sleep_wake_secs")]
-    pub sleep_wake_secs: u32,
 }
 
-fn default_sleep_wake_secs() -> u32 {
-    900
-}
 fn default_orientation() -> String {
     "portrait".to_string()
 }
@@ -113,8 +106,6 @@ impl Default for DeviceConfig {
             landscape_rotation: default_landscape_rotation(),
             color_panel: true,
             frontlight_timeout_secs: 0,
-            sleep_after_secs: 0,
-            sleep_wake_secs: default_sleep_wake_secs(),
         }
     }
 }

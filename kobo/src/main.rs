@@ -11,7 +11,7 @@ mod paths;
 mod power;
 mod ui;
 
-use backend::{BackendClient, EntityState};
+use backend::{BackendClient, BackendSleepInfo, EntityState};
 use clap::Parser;
 use config::AppConfig;
 use display::{create_framebuffer, Canvas, Refresh};
@@ -123,6 +123,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 println!("  Status: {}", payload.status);
                 println!("  Cards: {}", payload.cards.len());
                 println!("  States generated: {}", states.len());
+                if let Some(sleep) = &payload.sleep {
+                    println!("  Sleep policy (from backend): enabled={}, wake in {}s", sleep.enabled, sleep.sleep_wake_secs);
+                }
                 println!();
             }
             Err(e) => {
@@ -145,24 +148,19 @@ async fn fetch_and_update(
     backend: &BackendClient,
     config: &mut AppConfig,
     renderer: &mut ScreenRenderer,
-) -> (HashMap<String, EntityState>, Duration) {
+) -> (HashMap<String, EntityState>, Option<BackendSleepInfo>) {
     match backend.fetch_dashboard().await {
         Ok(payload) => {
-            let sleep_secs = payload
-                .sleep
-                .as_ref()
-                .map(|s| s.sleep_wake_secs)
-                .unwrap_or(1800);
             if let Some(s) = &payload.sleep {
                 renderer.sleep_until = s.sleep_note.clone();
             }
             renderer.last_update = Some(chrono::Utc::now());
             let states = BackendClient::apply_to_app(&payload, config);
-            (states, Duration::from_secs(sleep_secs as u64))
+            (states, payload.sleep)
         }
         Err(e) => {
             tracing::warn!("Backend fetch failed: {}", e);
-            (HashMap::new(), Duration::from_secs(1800))
+            (HashMap::new(), None)
         }
     }
 }
@@ -254,27 +252,35 @@ async fn run_device(
         .ok()
         .and_then(|p| p.parent().map(|d| d.join("wifi.sh")))
         .unwrap_or_else(|| PathBuf::from("/mnt/onboard/.kobo-ha/wifi.sh"));
-    let sleep_after = Duration::from_secs(config.device.sleep_after_secs as u64);
-    let mut sleep_wake = Duration::from_secs(config.device.sleep_wake_secs.max(120) as u64);
 
-    let mut sleep_enabled = if sleep_after.is_zero() {
-        tracing::info!("Sleep mode: disabled (sleep_after_secs = 0)");
-        false
-    } else if let Some(reason) = power::sleep_unsupported_reason(&wifi_script) {
-        tracing::warn!("Sleep mode: unavailable ({})", reason);
-        false
-    } else {
-        tracing::info!("Sleep mode: after {:?} without taps, waking every {:?}", sleep_after, sleep_wake);
-        true
+    // Deep sleep is 100% defined and scheduled by the Python backend!
+    let (mut current_states, initial_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
+
+    let mut sleep_backend_enabled = initial_sleep.as_ref().map(|s| s.enabled).unwrap_or(true);
+    let mut sleep_after = Duration::from_secs(initial_sleep.as_ref().map(|s| s.sleep_after_secs as u64).unwrap_or(30));
+    let mut sleep_wake = Duration::from_secs(initial_sleep.as_ref().map(|s| s.sleep_wake_secs as u64).unwrap_or(1800));
+
+    let sleep_hw_supported = power::sleep_unsupported_reason(&wifi_script).is_none();
+    if !sleep_hw_supported {
+        tracing::warn!("Sleep mode: unavailable on hardware ({})", power::sleep_unsupported_reason(&wifi_script).unwrap_or(""));
+    }
+
+    let mut apply_backend_sleep = |s: &BackendSleepInfo| {
+        sleep_backend_enabled = s.enabled;
+        sleep_after = Duration::from_secs(s.sleep_after_secs.max(5) as u64);
+        sleep_wake = Duration::from_secs(s.sleep_wake_secs.max(120) as u64);
+        tracing::info!("Backend sleep settings: enabled={}, after={:?}, wake_interval={:?}", sleep_backend_enabled, sleep_after, sleep_wake);
     };
+
+    if let Some(s) = &initial_sleep {
+        apply_backend_sleep(s);
+    }
 
     let mut ignore_power_until = Instant::now();
     let mut sleep_failures = 0u32;
     let mut sleep_requested = false;
     let mut last_power_press = Instant::now() - Duration::from_secs(10);
 
-    let (mut current_states, initial_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
-    sleep_wake = initial_sleep;
     renderer.render(&mut canvas, &config, 0, &current_states, true);
     flush(&mut fb, &canvas, true);
 
@@ -288,8 +294,10 @@ async fn run_device(
         };
         let sleep_deadline = if sleep_requested {
             Some(tokio::time::Instant::now())
+        } else if sleep_backend_enabled && sleep_hw_supported && sleep_failures < 3 {
+            Some(tokio::time::Instant::from_std(last_activity + sleep_after))
         } else {
-            sleep_enabled.then(|| tokio::time::Instant::from_std(last_activity + sleep_after))
+            None
         };
 
         tokio::select! {
@@ -305,7 +313,7 @@ async fn run_device(
                     last_activity = Instant::now();
                     continue;
                 }
-                tracing::info!("Entering sleep mode");
+                tracing::info!("Entering backend-scheduled sleep mode (waking in {:?})", sleep_wake);
                 let light_was_on = light.as_ref().map(|l| l.is_on()).unwrap_or(false) || light_dimmed;
                 let mut woke_by_button = false;
                 let mut wifi_down = false;
@@ -405,9 +413,11 @@ async fn run_device(
                         let (new_states, new_sleep) = tokio::time::timeout(
                             Duration::from_secs(20),
                             fetch_and_update(&backend, &mut config, &mut renderer)
-                        ).await.unwrap_or((current_states.clone(), sleep_wake));
+                        ).await.unwrap_or((current_states.clone(), None));
                         current_states = new_states;
-                        sleep_wake = new_sleep;
+                        if let Some(s) = &new_sleep {
+                            apply_backend_sleep(s);
+                        }
                     }
                     power::log_battery();
                 }
@@ -424,7 +434,6 @@ async fn run_device(
                     }
                 }
                 if sleep_failures >= 3 {
-                    sleep_enabled = false;
                     tracing::warn!("Sleep mode: 3 failed attempts in a row, staying awake");
                 }
                 last_activity = Instant::now();
@@ -466,7 +475,7 @@ async fn run_device(
                     InputEvent::PowerButton if last_power_press.elapsed() < Duration::from_secs(2) => continue,
                     InputEvent::PowerButton => {
                         last_power_press = Instant::now();
-                        if sleep_enabled && !power::is_plugged() {
+                        if sleep_backend_enabled && sleep_hw_supported && !power::is_plugged() {
                             tracing::info!("Power button pressed: going to sleep");
                             sleep_requested = true;
                             continue;
@@ -521,7 +530,9 @@ async fn run_device(
                     UiAction::Refresh => {
                         let (new_states, new_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
                         current_states = new_states;
-                        sleep_wake = new_sleep;
+                        if let Some(s) = &new_sleep {
+                            apply_backend_sleep(s);
+                        }
                         renderer.render(&mut canvas, &config, 0, &current_states, true);
                         flush(&mut fb, &canvas, true);
                     }
@@ -540,7 +551,9 @@ async fn run_device(
             _ = wake_rx.recv() => {
                 let (new_states, new_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
                 current_states = new_states;
-                sleep_wake = new_sleep;
+                if let Some(s) = &new_sleep {
+                    apply_backend_sleep(s);
+                }
                 renderer.render(&mut canvas, &config, 0, &current_states, true);
                 flush(&mut fb, &canvas, false);
             }

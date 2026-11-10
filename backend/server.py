@@ -155,6 +155,7 @@ def calculate_next_update(config: dict, schedule: dict, now: datetime, next_even
     """
     sleep_cfg = schedule.get("sleep_mode", {})
     enabled = sleep_cfg.get("enabled", True)
+    sleep_after = sleep_cfg.get("sleep_after_secs", 30)
     default_interval = sleep_cfg.get("update_interval_seconds", 1800)
     sleep_until_next = sleep_cfg.get("sleep_until_next_period", False)
 
@@ -188,6 +189,7 @@ def calculate_next_update(config: dict, schedule: dict, now: datetime, next_even
 
     return {
         "enabled": enabled,
+        "sleep_after_secs": sleep_after,
         "sleep_wake_secs": wake_seconds,
         "next_update_at": wake_dt.isoformat(),
         "sleep_note": f"Nächstes Update um {formatted_wake}",

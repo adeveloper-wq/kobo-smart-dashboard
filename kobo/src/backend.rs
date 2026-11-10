@@ -44,6 +44,8 @@ pub struct ForecastItem {
 pub struct BackendSleepInfo {
     #[serde(default = "default_true")]
     pub enabled: bool,
+    #[serde(default = "default_sleep_after")]
+    pub sleep_after_secs: u32,
     #[serde(default = "default_sleep_secs")]
     pub sleep_wake_secs: u32,
     #[serde(default)]
@@ -54,6 +56,10 @@ pub struct BackendSleepInfo {
 
 fn default_true() -> bool {
     true
+}
+
+fn default_sleep_after() -> u32 {
+    30
 }
 
 fn default_sleep_secs() -> u32 {

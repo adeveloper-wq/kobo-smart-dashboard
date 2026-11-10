@@ -108,10 +108,12 @@ class TestServerLogic(unittest.TestCase):
     def test_next_update_precalculation(self):
         tz = timezone.utc
         now = datetime(2026, 11, 10, 10, 0, tzinfo=tz)
-        sched = {"end_time": "12:00", "sleep_mode": {"enabled": True, "update_interval_seconds": 1800}}
+        sched = {"end_time": "12:00", "sleep_mode": {"enabled": True, "sleep_after_secs": 30, "update_interval_seconds": 1800}}
         update = server.calculate_next_update(self.config, sched, now)
         self.assertIn("sleep_wake_secs", update)
         self.assertGreaterEqual(update["sleep_wake_secs"], 120)
+        self.assertEqual(update["sleep_after_secs"], 30)
+        self.assertTrue(update["enabled"])
         self.assertIn("sleep_note", update)
 
     def test_dashboard_payload_structure(self):
