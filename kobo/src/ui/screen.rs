@@ -122,7 +122,8 @@ fn zones_for<'a>(cards: &'a [CardConfig], cw: f32, ch: f32, top: f32) -> Vec<(&'
     // Display calendars for both persons side by side in separate columns!
     if cals.len() == 2 && !non_cals.is_empty() {
         let usable_h = (avail_h - GAP).max(100.0);
-        let top_h = (usable_h * 0.44).clamp(180.0, 320.0);
+        // Compact top row (greeting + weather); calendars get the remaining height
+        let top_h = (usable_h * 0.2).clamp(150.0, 170.0);
         let cal_h = usable_h - top_h;
         let cal_y = top + top_h + GAP;
 
@@ -256,18 +257,18 @@ impl ScreenRenderer {
         use crate::i18n;
         let theme = &self.theme;
         canvas.fill_rounded_rect(bar.x, bar.y, bar.w, bar.h, bar.h / 2.0, theme.text);
-        let icon = (bar.h * 0.5).min(40.0);
+        let icon = (bar.h * 0.5).min(46.0);
         let ix = bar.x + bar.h * 0.4;
         canvas.draw_icon("moon", ix, bar.y + (bar.h - icon) / 2.0, icon, theme.surface, 2.2);
         let tx = ix + icon + 18.0;
         let max_w = bar.x + bar.w - bar.h * 0.4 - tx;
         
-        let (line, size) = sleep_line(canvas, next, max_w, 24.0);
+        let (line, size) = sleep_line(canvas, next, max_w, 30.0);
         let tw = canvas.draw_text_fit(&line, tx, bar.y + bar.h / 2.0 - size / 2.0, size, true, theme.surface, TextAlign::Left, max_w);
         let hint_x = tx + tw + 18.0;
         if hint_x + 120.0 < tx + max_w {
             let muted = theme.surface.mix(theme.text, 0.35);
-            canvas.draw_text_fit(&i18n::t("sleep.wake_hint"), hint_x, bar.y + bar.h / 2.0 - 11.0, 22.0, false, muted, TextAlign::Left, tx + max_w - hint_x);
+            canvas.draw_text_fit(&i18n::t("sleep.wake_hint"), hint_x, bar.y + bar.h / 2.0 - 13.0, 24.0, false, muted, TextAlign::Left, tx + max_w - hint_x);
         }
     }
 
@@ -278,8 +279,8 @@ impl ScreenRenderer {
             CardConfig::Weather { entity_id, title, forecast_days } => {
                 render_weather_card(canvas, theme, rect, entity_id, states.get(entity_id), title.as_deref(), *forecast_days, targets)
             }
-            CardConfig::Greeting { title, subtitle, icon } => {
-                render_greeting_card(canvas, theme, rect, title.as_deref(), subtitle.as_deref(), icon.as_deref(), targets);
+            CardConfig::Greeting { title, temperature, condition, humidity, .. } => {
+                render_greeting_card(canvas, theme, rect, title.as_deref(), *temperature, condition.as_deref(), *humidity, targets);
             }
             CardConfig::Calendar { title, events } => {
                 render_calendar_card(canvas, theme, rect, title.as_deref(), events, targets);
@@ -310,11 +311,11 @@ fn sleep_line(canvas: &Canvas, next: &str, max_w: f32, max_size: f32) -> (String
     let title = crate::i18n::t("sleep.title");
     let full = format!("{} · {}", title, next);
     let mut size = max_size;
-    while size >= 18.0 {
+    while size >= 22.0 {
         if canvas.measure_text(&full, size, true).0 <= max_w {
             return (full, size);
         }
         size -= 2.0;
     }
-    (full, 18.0)
+    (full, 22.0)
 }

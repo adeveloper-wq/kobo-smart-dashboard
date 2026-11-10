@@ -218,9 +218,9 @@ def get_weather_data(config: dict) -> dict:
         return data
     except Exception as e:
         sys.stderr.write(f"Weather fetch failed: {e}. Using cached/fallback data.\n")
-        if _weather_cache["data"]:
-            return _weather_cache["data"]
-        return weather_client.get_mock_weather(unit)
+        if not _weather_cache.get("data"):
+            _weather_cache = {"data": weather_client.get_mock_weather(unit), "timestamp": now_ts}
+        return _weather_cache["data"]
 
 
 def get_configured_calendars(config: dict) -> list[dict]:
@@ -401,8 +401,9 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
         {
             "type": "greeting",
             "title": greeting_data["title"],
-            "subtitle": greeting_data["subtitle"],
-            "icon": greeting_data["icon"]
+            "temperature": weather_data.get("temperature"),
+            "condition": weather_data.get("condition"),
+            "humidity": weather_data.get("humidity")
         },
         {
             "type": "weather",

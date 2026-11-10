@@ -223,6 +223,13 @@ pub enum CardConfig {
         subtitle: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         icon: Option<String>,
+        /// Current weather shown next to the greeting
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        temperature: Option<f32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        condition: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        humidity: Option<f32>,
     },
     #[serde(rename = "calendar")]
     Calendar {

@@ -14,13 +14,13 @@ use crate::display::{Canvas, TextAlign};
 use crate::ui::layout::Rect;
 use crate::ui::theme::{Theme, Tone};
 
-/// Shared type scale (px at 300 ppi)
+/// Shared type scale (px at 300 ppi, enlarged for high legibility on small ~10 cm displays)
 pub mod type_scale {
-    pub const LABEL: f32 = 22.0;
-    pub const BODY: f32 = 24.0;
-    pub const TITLE: f32 = 28.0;
-    pub const VALUE: f32 = 40.0;
-    pub const HERO: f32 = 84.0;
+    pub const LABEL: f32 = 26.0;
+    pub const BODY: f32 = 30.0;
+    pub const TITLE: f32 = 38.0;
+    pub const VALUE: f32 = 54.0;
+    pub const HERO: f32 = 96.0;
 }
 
 pub const PAD: f32 = 24.0;

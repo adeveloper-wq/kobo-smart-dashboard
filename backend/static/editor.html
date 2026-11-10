@@ -204,142 +204,132 @@
       position: relative;
     }
 
-    /* Screen Elements (High-contrast B&W Horizontal Dashboard preview) */
+    /* Screen Elements (High-contrast B&W Horizontal Dashboard preview - optimized for ~10cm displays) */
     .ks-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 2px solid #000;
-      padding-bottom: 8px;
+      border-bottom: 3px solid #000;
+      padding-bottom: 10px;
     }
-    .ks-clock { font-size: 26px; font-weight: 800; color: #000; }
-    .ks-date { font-size: 12px; color: #333; font-weight: 600; }
-    .ks-icons { display: flex; gap: 10px; font-size: 12px; color: #000; filter: grayscale(100%); }
+    .ks-clock { font-size: 40px; font-weight: 900; color: #000; line-height: 1; }
+    .ks-date { font-size: 16px; color: #222; font-weight: 700; margin-top: 4px; }
+    .ks-icons { display: flex; gap: 14px; font-size: 16px; font-weight: 700; color: #000; filter: grayscale(100%); align-items: center; }
 
     /* 2-column layout rows */
     .ks-grid-row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
     }
 
     .ks-greeting {
       background: #ffffff;
-      border: 2px solid #000000;
+      border: 2.5px solid #000000;
       border-radius: 18px;
-      padding: 14px 16px;
-      display: flex;
-      gap: 14px;
-      align-items: center;
-    }
-    .ks-greeting-icon {
-      width: 48px;
-      height: 48px;
-      min-width: 48px;
-      border-radius: 50%;
-      border: 2px solid #000000;
-      background: #eeeeee;
+      padding: 8px 20px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      filter: grayscale(100%);
+      min-width: 0;
     }
-    .ks-greeting-title { font-size: 18px; font-weight: 800; color: #000; }
-    .ks-greeting-sub { font-size: 12px; color: #444; margin-top: 4px; }
+    .ks-greeting-flow { font-size: 30px; font-weight: 900; color: #000; line-height: 1.2; overflow-wrap: anywhere; }
+    .ks-chip { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+    .ks-weather-icon { font-size: 28px; filter: grayscale(100%); }
 
     .ks-weather {
       background: #ffffff;
-      border: 2px solid #000000;
+      border: 2.5px solid #000000;
       border-radius: 18px;
-      padding: 14px 16px;
+      padding: 8px 16px;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      flex-direction: row;
+      align-items: center;
+      gap: 14px;
     }
     .ks-weather-top {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 0 0 36%;
+      border-right: 2px solid #ddd;
+      padding-right: 10px;
     }
-    .ks-weather-main { display: flex; align-items: baseline; gap: 8px; }
-    .ks-temp { font-size: 34px; font-weight: 900; color: #000; }
-    .ks-cond { font-size: 13px; font-weight: 700; color: #000; }
-    .ks-weather-metrics { font-size: 11px; color: #333; }
+    .ks-weather-main { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+    .ks-temp { font-size: 46px; font-weight: 900; color: #000; line-height: 1; }
+    .ks-cond { font-size: 20px; font-weight: 800; color: #000; white-space: nowrap; }
+    .ks-weather-metrics { font-size: 16px; font-weight: 700; color: #222; white-space: nowrap; }
 
     .ks-forecast-strip {
       display: flex;
-      justify-content: space-between;
-      border-top: 1px solid #ccc;
-      padding-top: 8px;
-      margin-top: 8px;
+      justify-content: space-around;
+      flex: 1;
     }
     .ks-fc-day {
       display: flex;
       flex-direction: column;
       align-items: center;
-      font-size: 11px;
+      font-size: 16px;
       color: #000;
     }
-    .ks-fc-day-name { font-weight: 700; font-size: 10px; }
-    .ks-fc-icon { font-size: 18px; margin: 2px 0; filter: grayscale(100%); }
-    .ks-fc-temp { font-weight: 700; font-size: 11px; }
-    .ks-fc-low { font-size: 10px; color: #666; margin-left: 2px; }
+    .ks-fc-day-name { font-weight: 800; font-size: 19px; }
+    .ks-fc-icon { font-size: 36px; margin: 4px 0; filter: grayscale(100%); }
+    .ks-fc-temp { font-weight: 800; font-size: 21px; }
+    .ks-fc-low { font-size: 17px; font-weight: 600; color: #666; margin-left: 3px; }
 
     /* Side-by-side Calendar columns */
     .ks-calendar-card {
       background: #ffffff;
-      border: 2px solid #000000;
+      border: 2.5px solid #000000;
       border-radius: 18px;
-      padding: 14px 16px;
+      padding: 18px 20px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      min-height: 240px;
+      gap: 10px;
     }
     .ks-cal-title {
-      font-size: 13px;
-      font-weight: 800;
+      font-size: 18px;
+      font-weight: 900;
       text-transform: uppercase;
       color: #000;
-      letter-spacing: 0.5px;
-      border-bottom: 2px solid #000;
-      padding-bottom: 4px;
+      letter-spacing: 0.8px;
+      border-bottom: 2.5px solid #000;
+      padding-bottom: 6px;
     }
     .ks-events-container {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
       flex: 1;
     }
     .ks-event-item {
       display: flex;
-      gap: 8px;
-      padding: 4px 0;
-      border-bottom: 1px dashed #cccccc;
-      font-size: 12px;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1.5px dashed #bbb;
+      font-size: 16px;
       color: #000;
-      align-items: baseline;
+      align-items: center;
     }
     .ks-event-badge {
-      font-weight: 700;
-      color: #000;
-      background: #eee;
+      font-weight: 800;
+      color: #fff;
+      background: #000;
       border-radius: 4px;
-      padding: 1px 4px;
-      font-size: 10px;
+      padding: 2px 7px;
+      font-size: 13px;
       white-space: nowrap;
     }
-    .ks-event-time { font-weight: 700; min-width: 72px; color: #000; font-size: 11px; }
-    .ks-event-title { font-weight: 600; flex: 1; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ks-event-time { font-weight: 800; min-width: 90px; color: #000; font-size: 15px; }
+    .ks-event-title { font-weight: 700; flex: 1; color: #000; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .ks-sleep-bar {
       background: #000000;
       color: #ffffff;
-      padding: 8px 14px;
+      padding: 12px 18px;
       border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
+      font-size: 15px;
+      font-weight: 800;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -538,26 +528,16 @@
 
           <!-- Row 1: Greeting + Weather (with Forecast) -->
           <div class="ks-grid-row">
-            <!-- Greeting Card -->
+            <!-- Greeting Card with current weather -->
             <div class="ks-greeting" id="ksGreeting">
-              <div class="ks-greeting-icon" id="ksGreetingIcon">☀️</div>
-              <div>
-                <div class="ks-greeting-title" id="ksGreetingTitle">Guten Tag!</div>
-                <div class="ks-greeting-sub" id="ksGreetingSub">Loading preview...</div>
+              <div class="ks-greeting-flow">
+                <span id="ksGreetingTitle">Guten Tag!</span>
+                <span class="ks-chip"><span class="ks-weather-icon" id="ksWeatherIcon">⛅</span><span id="ksTemp">--°</span></span>
               </div>
             </div>
 
-            <!-- Weather Card with Forecast -->
+            <!-- Weather Card: 4-day forecast only -->
             <div class="ks-weather" id="ksWeather">
-              <div class="ks-weather-top">
-                <div class="ks-weather-main">
-                  <span class="ks-temp" id="ksTemp">--°</span>
-                  <span class="ks-cond" id="ksCond">--</span>
-                </div>
-                <div class="ks-weather-metrics">
-                  <span>💧 <b id="ksHumidity">--%</b> (<span id="ksHumidityStatus">--</span>)</span>
-                </div>
-              </div>
               <div class="ks-forecast-strip" id="ksForecastStrip">
                 <!-- Forecast days dynamically injected -->
               </div>
@@ -849,16 +829,12 @@
       // Greeting (Randomly chosen)
       if (data.greeting) {
         document.getElementById('ksGreetingTitle').textContent = data.greeting.title || '';
-        document.getElementById('ksGreetingSub').textContent = data.greeting.subtitle || '';
-        document.getElementById('ksGreetingIcon').textContent = data.greeting.icon === 'moon' ? '🌙' : '☀️';
       }
 
       // Weather + Forecast
       if (data.weather) {
-        document.getElementById('ksTemp').textContent = `${Math.round(data.weather.temperature || 0)}${data.weather.temperature_unit || '°C'}`;
-        document.getElementById('ksCond').textContent = data.weather.condition_label || '';
-        document.getElementById('ksHumidity').textContent = `${Math.round(data.weather.humidity || 0)}%`;
-        document.getElementById('ksHumidityStatus').textContent = data.weather.humidity_status || 'Angenehm';
+        document.getElementById('ksTemp').textContent = `${Math.round(data.weather.temperature || 0)}°`;
+        document.getElementById('ksWeatherIcon').textContent = weatherEmoji(data.weather.condition);
 
         // Render 4-day forecast
         const fcContainer = document.getElementById('ksForecastStrip');
@@ -904,17 +880,18 @@
       const container = document.getElementById(elementId);
       container.innerHTML = '';
       if (!events || events.length === 0) {
-        container.innerHTML = '<div style="font-size: 12px; color: #777; padding: 20px 0; text-align: center;">Keine anstehenden Termine</div>';
+        container.innerHTML = '<div style="font-size: 15px; color: #666; font-weight: 600; padding: 24px 0; text-align: center;">Keine anstehenden Termine</div>';
         return;
       }
       events.slice(0, 4).forEach(ev => {
         const item = document.createElement('div');
         item.className = 'ks-event-item';
         const dateBadge = ev.date_label ? `<span class="ks-event-badge">${ev.date_label}</span>` : '';
+        const locBadge = ev.location ? ` <span style="font-weight: 500; color: #444;">· ${ev.location}</span>` : '';
         item.innerHTML = `
           ${dateBadge}
           <div class="ks-event-time">${ev.is_all_day ? 'Ganztägig' : ev.time}</div>
-          <div class="ks-event-title" title="${ev.title}">${ev.title}</div>
+          <div class="ks-event-title" title="${ev.title}">${ev.title}${locBadge}</div>
         `;
         container.appendChild(item);
       });

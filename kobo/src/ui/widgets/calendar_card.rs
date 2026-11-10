@@ -18,23 +18,24 @@ pub fn render_calendar_card(
     let mut y0 = rect.y + PAD;
     let max_w = rect.w - 2.0 * PAD;
 
-    // Card Header Title
+    // Card Header Title (enlarged for small display readability)
     let header_title = title.unwrap_or("Termine").to_uppercase();
-    canvas.draw_text_fit(&header_title, x0, y0, type_scale::LABEL, true, theme.text_muted, TextAlign::Left, max_w);
-    y0 += type_scale::LABEL + 16.0;
+    let header_size = 30.0;
+    canvas.draw_text_fit(&header_title, x0, y0, header_size, true, theme.text, TextAlign::Left, max_w);
+    y0 += header_size + 14.0;
 
     // Divider line
-    canvas.fill_rect(x0, y0, max_w, 1.5, theme.border);
-    y0 += 14.0;
+    canvas.fill_rect(x0, y0, max_w, 2.5, theme.border);
+    y0 += 16.0;
 
     if events.is_empty() {
         let msg = "Keine anstehenden Termine";
-        canvas.draw_text(msg, x0 + max_w / 2.0, y0 + 20.0, type_scale::BODY, false, theme.text_muted, TextAlign::Center);
+        canvas.draw_text(msg, x0 + max_w / 2.0, y0 + 24.0, type_scale::BODY, false, theme.text_muted, TextAlign::Center);
         return;
     }
 
-    let time_col_w = if rect.w >= 600.0 { 180.0 } else { 140.0 };
-    let row_h = 48.0;
+    let time_col_w = if rect.w >= 600.0 { 210.0 } else { 160.0 };
+    let row_h = 60.0;
 
     for ev in events {
         if y0 + row_h > rect.y + rect.h - 10.0 {
