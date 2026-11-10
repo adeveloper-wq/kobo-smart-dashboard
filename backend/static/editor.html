@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kobo Dashboard Backend Config Builder</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-alt: #334155;
+      --border: #475569;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #f59e0b;
+      --primary-hover: #d97706;
+      --success: #10b981;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      background: var(--primary);
+      color: #000;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+    }
+    .brand-title h1 { font-size: 18px; font-weight: 700; }
+    .brand-title p { font-size: 12px; color: var(--text-muted); }
+
+    .header-actions { display: flex; gap: 12px; align-items: center; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; }
+
+    button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary { background: var(--primary); color: #000; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--surface-alt); color: var(--text); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+    .main-container {
+      display: grid;
+      grid-template-columns: 1fr 480px;
+      gap: 24px;
+      padding: 24px;
+      flex: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 1100px) {
+      .main-container { grid-template-columns: 1fr; }
+    }
+
+    .card-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .tab-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 6px;
+      padding: 8px 14px;
+    }
+    .tab-btn.active {
+      background: var(--surface-alt);
+      color: var(--text);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+    input, select, textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+    textarea { font-family: monospace; min-height: 80px; resize: vertical; }
+
+    /* Schedule Cards */
+    .schedule-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+    .schedule-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .schedule-title {
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-now {
+      background: var(--primary);
+      color: #000;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    /* Kobo Screen Preview */
+    .preview-sticky {
+      position: sticky;
+      top: 88px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .preview-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .kobo-bezel {
+      background: #111;
+      border-radius: 20px;
+      padding: 16px 14px 24px 14px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 0 0 1px #333;
+    }
+    .kobo-screen {
+      background: #faf8f5;
+      color: #1a1a1a;
+      border-radius: 6px;
+      min-height: 560px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+      position: relative;
+    }
+
+    /* Screen Elements */
+    .ks-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #e5e5e5;
+      padding-bottom: 8px;
+    }
+    .ks-clock { font-size: 26px; font-weight: 800; }
+    .ks-date { font-size: 12px; color: #666; font-weight: 600; }
+    .ks-icons { display: flex; gap: 8px; font-size: 12px; color: #555; }
+
+    .ks-greeting {
+      background: #f0ede8;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .ks-greeting-icon { font-size: 32px; }
+    .ks-greeting-title { font-size: 18px; font-weight: 800; color: #111; }
+    .ks-greeting-sub { font-size: 12px; color: #666; margin-top: 2px; }
+
+    .ks-weather {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ks-weather-main { display: flex; align-items: baseline; gap: 8px; }
+    .ks-temp { font-size: 38px; font-weight: 900; }
+    .ks-cond { font-size: 14px; font-weight: 700; color: #444; }
+    .ks-forecast-row { display: flex; gap: 12px; margin-top: 8px; }
+    .ks-fc-day { font-size: 11px; text-align: center; color: #555; }
+
+    .ks-calendar {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ks-cal-title { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #888; letter-spacing: 0.5px; }
+    .ks-event-item {
+      display: flex;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px dashed #eee;
+      font-size: 13px;
+    }
+    .ks-event-time { font-weight: 700; min-width: 90px; color: #111; font-size: 12px; }
+    .ks-event-title { font-weight: 600; flex: 1; }
+
+    .ks-sleep-bar {
+      background: #111;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface-alt);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: none;
+      z-index: 1000;
+      border-left: 4px solid var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">K</div>
+      <div class="brand-title">
+        <h1>Kobo Dashboard Backend</h1>
+        <p>Dynamic Multi-Schedule Config Builder</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="status-badge" id="statusBadge">
+        <div class="status-dot"></div>
+        <span id="statusText">Connecting...</span>
+      </div>
+      <button class="btn-secondary" onclick="refreshPreview()">🔄 Refresh</button>
+      <button class="btn-primary" onclick="saveConfig()">💾 Save Config</button>
+      <button class="btn-secondary" onclick="quitBuilder()" title="Shut down the builder">❌ Quit</button>
+    </div>
+  </header>
+
+  <div class="main-container">
+
+    <!-- Left Column: Config Builder -->
+    <div class="card-panel">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('schedules')">⏰ Time of Day Schedules</button>
+        <button class="tab-btn" onclick="switchTab('services')">🌤️ Weather & Calendar</button>
+        <button class="tab-btn" onclick="switchTab('theme')">🎨 Theme & Display</button>
+        <button class="tab-btn" onclick="switchTab('json')">{ } Raw JSON</button>
+      </div>
+
+      <!-- Tab 1: Schedules -->
+      <div id="tab-schedules">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3>Configured Time Periods</h3>
+            <p style="font-size: 13px; color: var(--text-muted);">The backend automatically serves different greetings, event scopes, and sleep schedules depending on the hour.</p>
+          </div>
+          <button class="btn-secondary btn-sm" onclick="addSchedule()">+ Add Schedule</button>
+        </div>
+
+        <div id="schedulesContainer" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Tab 2: Services -->
+      <div id="tab-services" style="display: none;">
+        <h3 style="margin-bottom: 14px;">User & Location Settings</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>User Name</label>
+            <input type="text" id="userName" placeholder="Daniel">
+          </div>
+          <div class="form-group">
+            <label>Timezone</label>
+            <input type="text" id="serverTimezone" placeholder="Europe/Berlin">
+          </div>
+        </div>
+
+        <h3 style="margin-top: 18px; margin-bottom: 14px;">🌤️ Weather & Humidity (Open-Meteo)</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Latitude</label>
+            <input type="number" step="0.0001" id="weatherLat">
+          </div>
+          <div class="form-group">
+            <label>Longitude</label>
+            <input type="number" step="0.0001" id="weatherLon">
+          </div>
+          <div class="form-group">
+            <label>Temperature Unit</label>
+            <select id="weatherUnit">
+              <option value="celsius">Celsius (°C)</option>
+              <option value="fahrenheit">Fahrenheit (°F)</option>
+            </select>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 18px; margin-bottom: 14px;">📅 Google Calendar / Gmail iCal Feeds</h3>
+        <div class="form-group">
+          <label>Secret iCal (.ics) URL</label>
+          <textarea id="calIcalUrl" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"></textarea>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+            In Google Calendar: Settings & Sharing → Choose calendar → <b>Secret address in iCal format</b>. Paste the URL here.
+          </p>
+        </div>
+      </div>
+
+      <!-- Tab 3: Theme -->
+      <div id="tab-theme" style="display: none;">
+        <h3 style="margin-bottom: 14px;">Display & E-Ink Appearance</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Color Mode</label>
+            <select id="themeMode">
+              <option value="kaleido">Kaleido (Color E-Ink)</option>
+              <option value="paper_warm">Paper Warm</option>
+              <option value="high_contrast_bw">High Contrast Black & White</option>
+              <option value="dark">Dark Mode</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Accent Color</label>
+            <input type="color" id="themeAccent" value="#D97706" style="height: 40px; padding: 2px;">
+          </div>
+          <div class="form-group">
+            <label>Time Format</label>
+            <select id="themeTimeFmt">
+              <option value="24h">24-hour (14:30)</option>
+              <option value="12h">12-hour (2:30 PM)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Raw JSON -->
+      <div id="tab-json" style="display: none;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <label>backend_config.json</label>
+          <button class="btn-secondary btn-sm" onclick="formatRawJson()">Format JSON</button>
+        </div>
+        <textarea id="rawJsonText" style="min-height: 480px; font-size: 13px; line-height: 1.4;"></textarea>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Live Simulator -->
+    <div class="preview-sticky">
+      <div class="preview-controls">
+        <label>Live Kobo Screen Preview</label>
+        <select id="previewScheduleSelect" onchange="loadPreviewForSchedule(this.value)">
+          <option value="">Current Time (Live)</option>
+        </select>
+      </div>
+
+      <div class="kobo-bezel">
+        <div class="kobo-screen" id="koboScreen">
+          <!-- Dynamic E-Ink Screen Content -->
+          <div class="ks-header">
+            <div>
+              <div class="ks-clock" id="ksClock">--:--</div>
+              <div class="ks-date" id="ksDate">Loading...</div>
+            </div>
+            <div class="ks-icons">
+              <span>🔋 85%</span>
+              <span>📶 Wi-Fi</span>
+            </div>
+          </div>
+
+          <div class="ks-greeting" id="ksGreeting">
+            <div class="ks-greeting-icon" id="ksGreetingIcon">☀️</div>
+            <div>
+              <div class="ks-greeting-title" id="ksGreetingTitle">Good day</div>
+              <div class="ks-greeting-sub" id="ksGreetingSub">Loading preview...</div>
+            </div>
+          </div>
+
+          <div class="ks-weather" id="ksWeather">
+            <div>
+              <div class="ks-weather-main">
+                <span class="ks-temp" id="ksTemp">--°</span>
+                <span class="ks-cond" id="ksCond">--</span>
+              </div>
+              <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                💧 Humidity: <b id="ksHumidity">--%</b> (<span id="ksHumidityStatus">--</span>)
+              </div>
+            </div>
+            <div id="ksWeatherIcon" style="font-size: 34px;">⛅</div>
+          </div>
+
+          <div class="ks-calendar" id="ksCalendar">
+            <div class="ks-cal-title" id="ksCalTitle">Today's Schedule</div>
+            <div id="ksEventsList" style="display: flex; flex-direction: column; gap: 4px;">
+              <!-- Events dynamically rendered -->
+            </div>
+          </div>
+
+          <div class="ks-sleep-bar" id="ksSleepBar">
+            <span>🌙 Sleep Mode</span>
+            <span id="ksSleepNote">Next update in 30m</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">Saved successfully</div>
+
+  <script>
+    let currentConfig = {};
+
+    async function init() {
+      await fetchConfig();
+      await refreshPreview();
+    }
+
+    async function fetchConfig() {
+      try {
+        const resp = await fetch('/api/config');
+        currentConfig = await resp.json();
+        populateForm(currentConfig);
+        updateScheduleSelect(currentConfig.schedules);
+      } catch (e) {
+        showToast('Error loading config: ' + e, true);
+      }
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      document.getElementById('tab-schedules').style.display = name === 'schedules' ? 'block' : 'none';
+      document.getElementById('tab-services').style.display = name === 'services' ? 'block' : 'none';
+      document.getElementById('tab-theme').style.display = name === 'theme' ? 'block' : 'none';
+      document.getElementById('tab-json').style.display = name === 'json' ? 'block' : 'none';
+
+      if (name === 'json') {
+        syncFormToConfig();
+        document.getElementById('rawJsonText').value = JSON.stringify(currentConfig, null, 2);
+      }
+    }
+
+    function populateForm(cfg) {
+      document.getElementById('userName').value = cfg.user?.name || '';
+      document.getElementById('serverTimezone').value = cfg.server?.timezone || '';
+
+      document.getElementById('weatherLat').value = cfg.weather?.latitude || 52.52;
+      document.getElementById('weatherLon').value = cfg.weather?.longitude || 13.405;
+      document.getElementById('weatherUnit').value = cfg.weather?.temperature_unit || 'celsius';
+
+      document.getElementById('calIcalUrl').value = (cfg.calendar?.ical_urls || []).join('\n');
+
+      document.getElementById('themeMode').value = cfg.theme?.mode || 'kaleido';
+      document.getElementById('themeAccent').value = cfg.theme?.accent_color || '#D97706';
+      document.getElementById('themeTimeFmt').value = cfg.theme?.time_format || '24h';
+
+      renderSchedulesList(cfg.schedules || []);
+    }
+
+    function renderSchedulesList(schedules) {
+      const container = document.getElementById('schedulesContainer');
+      container.innerHTML = '';
+
+      schedules.forEach((s, idx) => {
+        const div = document.createElement('div');
+        div.className = 'schedule-item';
+        div.innerHTML = `
+          <div class="schedule-header">
+            <div class="schedule-title">
+              <span>${s.name || s.id}</span>
+              <span style="font-size: 13px; color: var(--text-muted);">(${s.start_time} - ${s.end_time})</span>
+            </div>
+            <div>
+              <button class="btn-secondary btn-sm" onclick="removeSchedule(${idx})">🗑️ Delete</button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Period Name</label>
+              <input type="text" value="${s.name || ''}" onchange="updateScheduleProp(${idx}, 'name', this.value)">
+            </div>
+            <div class="form-group">
+              <label>Start Time</label>
+              <input type="time" value="${s.start_time}" onchange="updateScheduleProp(${idx}, 'start_time', this.value)">
+            </div>
+            <div class="form-group">
+              <label>End Time</label>
+              <input type="time" value="${s.end_time}" onchange="updateScheduleProp(${idx}, 'end_time', this.value)">
+            </div>
+            <div class="form-group">
+              <label>Calendar Scope</label>
+              <select onchange="updateScheduleProp(${idx}, 'calendar_scope', this.value)">
+                <option value="today" ${s.calendar_scope === 'today' ? 'selected' : ''}>Today's Events</option>
+                <option value="today_remaining" ${s.calendar_scope === 'today_remaining' ? 'selected' : ''}>Today's Remaining</option>
+                <option value="tomorrow" ${s.calendar_scope === 'tomorrow' ? 'selected' : ''}>Tomorrow's Events</option>
+                <option value="next_24h" ${s.calendar_scope === 'next_24h' ? 'selected' : ''}>Next 24 Hours</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Greeting Title Template</label>
+              <input type="text" value="${s.greeting?.title || ''}" onchange="updateScheduleGreeting(${idx}, 'title', this.value)">
+            </div>
+            <div class="form-group">
+              <label>Greeting Subtitle</label>
+              <input type="text" value="${s.greeting?.subtitle || ''}" onchange="updateScheduleGreeting(${idx}, 'subtitle', this.value)">
+            </div>
+            <div class="form-group">
+              <label>Sleep & Refresh (Seconds)</label>
+              <input type="number" step="60" value="${s.sleep_mode?.update_interval_seconds || 1800}" onchange="updateScheduleSleep(${idx}, 'update_interval_seconds', parseInt(this.value))">
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateScheduleProp(idx, key, val) {
+      currentConfig.schedules[idx][key] = val;
+      refreshPreview();
+    }
+    function updateScheduleGreeting(idx, key, val) {
+      if (!currentConfig.schedules[idx].greeting) currentConfig.schedules[idx].greeting = {};
+      currentConfig.schedules[idx].greeting[key] = val;
+      refreshPreview();
+    }
+    function updateScheduleSleep(idx, key, val) {
+      if (!currentConfig.schedules[idx].sleep_mode) currentConfig.schedules[idx].sleep_mode = {};
+      currentConfig.schedules[idx].sleep_mode[key] = val;
+      refreshPreview();
+    }
+    function removeSchedule(idx) {
+      currentConfig.schedules.splice(idx, 1);
+      renderSchedulesList(currentConfig.schedules);
+      refreshPreview();
+    }
+    function addSchedule() {
+      currentConfig.schedules.push({
+        id: "period_" + Date.now(),
+        name: "Custom Period",
+        start_time: "14:00",
+        end_time: "17:00",
+        greeting: { title: "Good day, {name}!", subtitle: "Enjoy your afternoon", icon: "sun" },
+        calendar_scope: "today",
+        cards: [{type: "greeting"}, {type: "weather"}, {type: "calendar"}, {type: "humidity"}],
+        sleep_mode: { enabled: true, update_interval_seconds: 1800 }
+      });
+      renderSchedulesList(currentConfig.schedules);
+      refreshPreview();
+    }
+
+    function syncFormToConfig() {
+      if (!currentConfig.user) currentConfig.user = {};
+      currentConfig.user.name = document.getElementById('userName').value;
+
+      if (!currentConfig.server) currentConfig.server = {};
+      currentConfig.server.timezone = document.getElementById('serverTimezone').value;
+
+      if (!currentConfig.weather) currentConfig.weather = {};
+      currentConfig.weather.latitude = parseFloat(document.getElementById('weatherLat').value) || 52.52;
+      currentConfig.weather.longitude = parseFloat(document.getElementById('weatherLon').value) || 13.405;
+      currentConfig.weather.temperature_unit = document.getElementById('weatherUnit').value;
+
+      if (!currentConfig.calendar) currentConfig.calendar = {};
+      const icalLines = document.getElementById('calIcalUrl').value.split('\n').map(s => s.trim()).filter(Boolean);
+      currentConfig.calendar.ical_urls = icalLines;
+
+      if (!currentConfig.theme) currentConfig.theme = {};
+      currentConfig.theme.mode = document.getElementById('themeMode').value;
+      currentConfig.theme.accent_color = document.getElementById('themeAccent').value;
+      currentConfig.theme.time_format = document.getElementById('themeTimeFmt').value;
+    }
+
+    function updateScheduleSelect(schedules) {
+      const sel = document.getElementById('previewScheduleSelect');
+      sel.innerHTML = '<option value="">Current Time (Live)</option>';
+      (schedules || []).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `${s.name} (${s.start_time} - ${s.end_time})`;
+        sel.appendChild(opt);
+      });
+    }
+
+    async function refreshPreview(scheduleId = null) {
+      try {
+        const url = scheduleId ? `/api/preview?schedule=${encodeURIComponent(scheduleId)}` : '/api/preview';
+        const resp = await fetch(url);
+        const data = await resp.json();
+        renderEinkScreen(data);
+
+        document.getElementById('statusText').textContent = `Online · ${data.active_schedule?.name || 'Live'}`;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function loadPreviewForSchedule(id) {
+      refreshPreview(id);
+    }
+
+    function renderEinkScreen(data) {
+      const now = new Date(data.generated_at);
+      document.getElementById('ksClock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      document.getElementById('ksDate').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+
+      // Greeting
+      if (data.greeting) {
+        document.getElementById('ksGreetingTitle').textContent = data.greeting.title || '';
+        document.getElementById('ksGreetingSub').textContent = data.greeting.subtitle || '';
+        document.getElementById('ksGreetingIcon').textContent = data.greeting.icon === 'moon' ? '🌙' : '☀️';
+      }
+
+      // Weather
+      if (data.weather) {
+        document.getElementById('ksTemp').textContent = `${Math.round(data.weather.temperature || 0)}${data.weather.temperature_unit || '°C'}`;
+        document.getElementById('ksCond').textContent = data.weather.condition_label || '';
+        document.getElementById('ksHumidity').textContent = `${Math.round(data.weather.humidity || 0)}%`;
+        document.getElementById('ksHumidityStatus').textContent = data.weather.humidity_status || 'Comfortable';
+      }
+
+      // Calendar
+      const eventsList = document.getElementById('ksEventsList');
+      eventsList.innerHTML = '';
+      const events = data.calendar?.events || [];
+      document.getElementById('ksCalTitle').textContent = (data.calendar?.scope === 'tomorrow') ? "Tomorrow's Agenda" : "Today's Schedule";
+
+      if (events.length === 0) {
+        eventsList.innerHTML = '<div style="font-size: 12px; color: #777; padding: 12px 0; text-align: center;">No upcoming events</div>';
+      } else {
+        events.forEach(ev => {
+          const item = document.createElement('div');
+          item.className = 'ks-event-item';
+          item.innerHTML = `
+            <div class="ks-event-time">${ev.time}</div>
+            <div class="ks-event-title">${ev.title}</div>
+          `;
+          eventsList.appendChild(item);
+        });
+      }
+
+      // Sleep Bar
+      if (data.sleep) {
+        document.getElementById('ksSleepNote').textContent = data.sleep.sleep_note || 'Sleep mode active';
+      }
+    }
+
+    async function saveConfig() {
+      syncFormToConfig();
+      // If on raw JSON tab, validate that
+      const jsonTab = document.getElementById('tab-json');
+      if (jsonTab.style.display !== 'none') {
+        try {
+          currentConfig = JSON.parse(document.getElementById('rawJsonText').value);
+        } catch (e) {
+          showToast('Invalid JSON: ' + e.message, true);
+          return;
+        }
+      }
+
+      try {
+        const resp = await fetch('/api/config', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(currentConfig)
+        });
+        const res = await resp.json();
+        if (res.status === 'ok') {
+          showToast('Configuration saved successfully!');
+          populateForm(currentConfig);
+          refreshPreview();
+        } else {
+          showToast('Error: ' + res.message, true);
+        }
+      } catch (e) {
+        showToast('Save failed: ' + e, true);
+      }
+    }
+
+    function formatRawJson() {
+      try {
+        const parsed = JSON.parse(document.getElementById('rawJsonText').value);
+        document.getElementById('rawJsonText').value = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        showToast('JSON syntax error: ' + e.message, true);
+      }
+    }
+
+    function showToast(msg, isErr = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.borderColor = isErr ? 'var(--danger)' : 'var(--primary)';
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    async function quitBuilder() {
+      if (!confirm("Stop the builder server?")) return;
+      try {
+        await fetch('/api/shutdown', { method: 'POST' });
+      } catch (e) {}
+      showToast("Builder server stopped. You may close this tab.");
+      document.getElementById('statusText').textContent = "Offline (Stopped)";
+      document.querySelector('.status-dot').style.background = "#ef4444";
+    }
+
+    init();
+  </script>
+</body>
+</html>

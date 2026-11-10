@@ -9,6 +9,9 @@
 # ==============================================================================
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
 KOBO_PATH="$1"
 if [ -z "$KOBO_PATH" ]; then
     for p in "/Volumes/KOBOeReader" "/media/$USER/KOBOeReader" "/run/media/$USER/KOBOeReader"; do

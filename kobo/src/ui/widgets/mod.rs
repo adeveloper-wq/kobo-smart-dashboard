@@ -1,5 +1,8 @@
+pub mod calendar_card;
 pub mod climate_card;
+pub mod greeting_card;
 pub mod header;
+pub mod humidity_card;
 pub mod light_card;
 pub mod media_card;
 pub mod scene_card;
@@ -7,8 +10,11 @@ pub mod sensor_card;
 pub mod switch_card;
 pub mod weather_card;
 
+pub use calendar_card::render_calendar_card;
 pub use climate_card::render_climate_card;
+pub use greeting_card::render_greeting_card;
 pub use header::render_header;
+pub use humidity_card::render_humidity_card;
 pub use light_card::render_light_card;
 pub use media_card::render_media_card;
 pub use scene_card::render_scenes_row;

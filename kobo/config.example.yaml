@@ -51,6 +51,11 @@ device:
   # While asleep, wake up this often (seconds) to refresh the screen
   sleep_wake_secs: 900
 
+backend:
+  # Python backend server URL (e.g. your Ubuntu server)
+  url: "http://192.168.1.100:8000"
+  enabled: true
+
 home_assistant:
   # An address the Kobo can reach on your Wi-Fi. ".local" (mDNS) names do NOT
   # work on the Kobo - use the IP address of Home Assistant.

@@ -33,7 +33,9 @@ fn span_of(card: &CardConfig) -> Span {
         CardConfig::Weather { .. }
         | CardConfig::ScenesRow { .. }
         | CardConfig::SensorGrid { .. }
-        | CardConfig::MediaPlayer { .. } => Span::Full,
+        | CardConfig::MediaPlayer { .. }
+        | CardConfig::Greeting { .. }
+        | CardConfig::Calendar { .. } => Span::Full,
         _ => Span::Half,
     }
 }
@@ -81,6 +83,13 @@ fn heights(card: &CardConfig, w: f32) -> (f32, f32) {
         }
         CardConfig::MediaPlayer { .. } => (180.0, 140.0),
         CardConfig::Scene { .. } => (112.0, 86.0),
+        CardConfig::Greeting { .. } => (140.0, 100.0),
+        CardConfig::Calendar { events, .. } => {
+            let row_count = events.len().clamp(1, 6);
+            let nat = 72.0 + (row_count as f32) * 48.0;
+            (nat, (nat - 30.0).max(120.0))
+        }
+        CardConfig::Humidity { .. } => (176.0, 140.0),
     }
 }
 
@@ -362,6 +371,15 @@ impl ScreenRenderer {
                     icon: icon.clone().unwrap_or_else(|| "play".to_string()),
                 }];
                 render_scenes_row(canvas, theme, rect, None, &item, targets)
+            }
+            CardConfig::Greeting { title, subtitle, icon } => {
+                render_greeting_card(canvas, theme, rect, title.as_deref(), subtitle.as_deref(), icon.as_deref(), targets);
+            }
+            CardConfig::Calendar { title, events } => {
+                render_calendar_card(canvas, theme, rect, title.as_deref(), events, targets);
+            }
+            CardConfig::Humidity { title, value, unit, status } => {
+                render_humidity_card(canvas, theme, rect, title.as_deref(), value, unit, status, targets);
             }
         }
     }

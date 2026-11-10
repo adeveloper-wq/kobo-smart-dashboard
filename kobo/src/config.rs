@@ -11,11 +11,36 @@ pub struct AppConfig {
     #[serde(default)]
     pub device: DeviceConfig,
     #[serde(default)]
+    pub backend: BackendConfig,
+    #[serde(default)]
     pub home_assistant: HomeAssistantConfig,
     #[serde(default)]
     pub theme: ThemeConfig,
     #[serde(default)]
     pub pages: Vec<PageConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BackendConfig {
+    /// URL of the Python backend server (e.g. "http://192.168.1.100:8000")
+    #[serde(default = "default_backend_url")]
+    pub url: String,
+    /// When true, dashboard layout, schedules, and cards are driven by the Python backend
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+}
+
+fn default_backend_url() -> String {
+    "http://127.0.0.1:8000".to_string()
+}
+
+impl Default for BackendConfig {
+    fn default() -> Self {
+        Self {
+            url: default_backend_url(),
+            enabled: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -301,6 +326,7 @@ fn default_page_icon() -> String {
 pub enum CardConfig {
     #[serde(rename = "weather")]
     Weather {
+        #[serde(default = "default_weather_entity")]
         entity_id: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         title: Option<String>,
@@ -379,6 +405,57 @@ pub enum CardConfig {
         title: Option<String>,
         scenes: Vec<SceneItemConfig>,
     },
+    #[serde(rename = "greeting")]
+    Greeting {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        title: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        subtitle: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        icon: Option<String>,
+    },
+    #[serde(rename = "calendar")]
+    Calendar {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        title: Option<String>,
+        #[serde(default)]
+        events: Vec<CalendarEventItem>,
+    },
+    #[serde(rename = "humidity")]
+    Humidity {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        title: Option<String>,
+        #[serde(default = "default_humidity_val")]
+        value: String,
+        #[serde(default = "default_percent")]
+        unit: String,
+        #[serde(default)]
+        status: String,
+    },
+}
+
+fn default_humidity_val() -> String {
+    "50".to_string()
+}
+
+fn default_percent() -> String {
+    "%".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalendarEventItem {
+    pub title: String,
+    pub time: String,
+    #[serde(default)]
+    pub date_label: Option<String>,
+    #[serde(default)]
+    pub location: Option<String>,
+    #[serde(default)]
+    pub is_all_day: bool,
+}
+
+fn default_weather_entity() -> String {
+    "weather.home".to_string()
 }
 
 fn default_forecast_days() -> usize {

@@ -1,5 +1,6 @@
 #![allow(dead_code, unused_imports)]
 
+mod backend;
 mod config;
 mod display;
 mod frontlight;
@@ -63,6 +64,10 @@ struct Args {
     /// Override orientation ("portrait" or "landscape")
     #[arg(long)]
     orientation: Option<String>,
+
+    /// URL of the Python backend (e.g. "http://192.168.1.50:8000")
+    #[arg(long)]
+    backend: Option<String>,
 
     /// Render a single frame and exit (useful for cron/batch mode)
     #[arg(long)]
@@ -137,6 +142,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     if let Some(orient) = args.orientation {
         config.device.orientation = orient;
+    }
+
+    if let Some(b_url) = args.backend {
+        config.backend.url = b_url;
+        config.backend.enabled = true;
     }
 
     // Language and the extra font some languages need
