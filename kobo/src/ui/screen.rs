@@ -87,14 +87,12 @@ fn layout_zone(cards: &[&CardConfig], x: f32, y: f32, w: f32, avail_h: f32) -> V
     let k = if natural > avail_h && slack > 0.0 { ((natural - avail_h) / slack).min(1.0) } else { 0.0 };
 
     let mut out = Vec::new();
-    let mut shown = 0;
     let mut cur_y = y;
     for (row, (nat, min)) in rows.iter().zip(row_heights) {
         let h = nat - k * (nat - min);
         if cur_y + h > y + avail_h + 1.0 {
             break;
         }
-        shown += 1;
         if row.len() == 2 {
             out.push((row[0], Rect::new(x, cur_y, half_w, h)));
             out.push((row[1], Rect::new(x + half_w + GAP, cur_y, half_w, h)));

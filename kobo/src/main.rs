@@ -225,8 +225,7 @@ async fn run_device(
 
     let mut partials: u32 = 0;
     let mut last_tap = Instant::now() - TAP_DEBOUNCE;
-    let mut flush = |fb: &mut Box<dyn display::FramebufferDriver>, canvas: &Canvas, force_full: bool| {
-        let cycles = config.device.full_refresh_cycles;
+    let mut flush = |fb: &mut Box<dyn display::FramebufferDriver>, canvas: &Canvas, cycles: u32, force_full: bool| {
         let refresh = if force_full {
             Refresh::Full
         } else if cycles > 0 && partials >= cycles {
@@ -261,35 +260,43 @@ async fn run_device(
         .and_then(|s| s.display_update_interval_secs.map(|d| d as u64))
         .filter(|&d| d >= 60 && d < sleep_wake.as_secs());
 
-    let sleep_hw_supported = power::sleep_unsupported_reason(&wifi_script).is_none();
-    if !sleep_hw_supported {
-        tracing::warn!("Sleep mode: unavailable on hardware ({})", power::sleep_unsupported_reason(&wifi_script).unwrap_or(""));
-    }
+    let sleep_hw_supported = match power::sleep_unsupported_reason(&wifi_script) {
+        Some(reason) => {
+            tracing::warn!("Sleep mode: unavailable on hardware ({})", reason);
+            false
+        }
+        None => true,
+    };
 
-    let mut apply_backend_sleep = |s: &BackendSleepInfo| {
-        sleep_backend_enabled = s.enabled;
+    fn apply_backend_sleep(
+        s: &BackendSleepInfo,
+        sleep_backend_enabled: &mut bool,
+        sleep_wake: &mut Duration,
+        display_wake: &mut Option<u64>,
+    ) {
+        *sleep_backend_enabled = s.enabled;
         let wifi_secs = s.sleep_wake_secs.max(120) as u64;
-        sleep_wake = Duration::from_secs(wifi_secs);
-        display_wake = s.display_update_interval_secs
+        *sleep_wake = Duration::from_secs(wifi_secs);
+        *display_wake = s.display_update_interval_secs
             .map(|d| d as u64)
             .filter(|&d| d >= 60 && d < wifi_secs);
         tracing::info!(
             "Backend sleep settings: enabled={}, wifi_wake={:?}, display_wake={:?}",
-            sleep_backend_enabled,
-            sleep_wake,
-            display_wake
+            *sleep_backend_enabled,
+            *sleep_wake,
+            *display_wake
         );
-    };
+    }
 
     if let Some(s) = &initial_sleep {
-        apply_backend_sleep(s);
+        apply_backend_sleep(s, &mut sleep_backend_enabled, &mut sleep_wake, &mut display_wake);
     }
 
     let mut sleep_failures = 0u32;
     let mut wifi_restoring = false;
 
     renderer.render(&mut canvas, &config, 0, &current_states, true);
-    flush(&mut fb, &canvas, true);
+    flush(&mut fb, &canvas, config.device.full_refresh_cycles, true);
 
     let mut clock = tokio::time::interval(Duration::from_secs(60));
     clock.tick().await;
@@ -329,7 +336,7 @@ async fn run_device(
                     WifiFetch,
                 }
                 let mut should_exit = false;
-                let mut wifi_down = false;
+                let wifi_down;
                 let mut wifi_is_on = true;
                 let mut next_wifi_at = chrono::Utc::now()
                     + chrono::Duration::from_std(sleep_wake).unwrap_or_else(|_| chrono::Duration::minutes(15));
@@ -345,7 +352,7 @@ async fn run_device(
                     renderer.sleep_until = Some(sleep_note_text);
                     renderer.render(&mut canvas, &config, 0, &current_states, wifi_is_on);
                     let full_refresh = first_sleep_render || last_wake == WakeReason::WifiFetch;
-                    flush(&mut fb, &canvas, full_refresh);
+                    flush(&mut fb, &canvas, config.device.full_refresh_cycles, full_refresh);
                     first_sleep_render = false;
 
                     let exit_wait = if last_wake == WakeReason::ClockOnly {
@@ -473,7 +480,7 @@ async fn run_device(
                         current_states = new_states;
                         last_fetch = Instant::now();
                         if let Some(s) = &new_sleep {
-                            apply_backend_sleep(s);
+                            apply_backend_sleep(s, &mut sleep_backend_enabled, &mut sleep_wake, &mut display_wake);
                         }
                     }
                     next_wifi_at = chrono::Utc::now()
@@ -497,7 +504,7 @@ async fn run_device(
                     tracing::warn!("Sleep mode: 3 failed attempts in a row, staying awake");
                 }
                 renderer.render(&mut canvas, &config, 0, &current_states, !wifi_down);
-                flush(&mut fb, &canvas, true);
+                flush(&mut fb, &canvas, config.device.full_refresh_cycles, true);
                 tracing::info!("Left sleep mode");
                 power::sync();
                 if wifi_down {
@@ -522,10 +529,10 @@ async fn run_device(
                 current_states = new_states;
                 last_fetch = Instant::now();
                 if let Some(s) = &new_sleep {
-                    apply_backend_sleep(s);
+                    apply_backend_sleep(s, &mut sleep_backend_enabled, &mut sleep_wake, &mut display_wake);
                 }
                 renderer.render(&mut canvas, &config, 0, &current_states, true);
-                flush(&mut fb, &canvas, true);
+                flush(&mut fb, &canvas, config.device.full_refresh_cycles, true);
             }
 
             event = touch_driver.recv() => {
@@ -537,7 +544,7 @@ async fn run_device(
                     }
                     InputEvent::PowerSourceChanged => {
                         renderer.render(&mut canvas, &config, 0, &current_states, true);
-                        flush(&mut fb, &canvas, false);
+                        flush(&mut fb, &canvas, config.device.full_refresh_cycles, false);
                     }
                     InputEvent::Tap { x, y } => {
                         if last_tap.elapsed() < TAP_DEBOUNCE {
@@ -559,15 +566,15 @@ async fn run_device(
                 current_states = new_states;
                 last_fetch = Instant::now();
                 if let Some(s) = &new_sleep {
-                    apply_backend_sleep(s);
+                    apply_backend_sleep(s, &mut sleep_backend_enabled, &mut sleep_wake, &mut display_wake);
                 }
                 renderer.render(&mut canvas, &config, 0, &current_states, true);
-                flush(&mut fb, &canvas, false);
+                flush(&mut fb, &canvas, config.device.full_refresh_cycles, false);
             }
 
             _ = clock.tick() => {
                 renderer.render(&mut canvas, &config, 0, &current_states, true);
-                flush(&mut fb, &canvas, false);
+                flush(&mut fb, &canvas, config.device.full_refresh_cycles, false);
             }
 
             _ = recv_signal(&mut sigterm) => { tracing::info!("SIGTERM received"); break; }

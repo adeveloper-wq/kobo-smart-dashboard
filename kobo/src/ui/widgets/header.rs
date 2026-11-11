@@ -213,7 +213,7 @@ pub fn render_header(
         status: &status_text,
         status_short: status_short.as_deref(),
     };
-    let (HeaderFit { btn, gap, time_size, pad, show_pct, full_text }, _) = choose_fit(canvas, w, n_buttons, &texts);
+    let (HeaderFit { btn, gap: _, time_size, pad, show_pct, full_text }, _) = choose_fit(canvas, w, n_buttons, &texts);
 
     // Clock + date
     canvas.draw_text(&time_str, SIDE_PAD, top - 4.0 + (row_h - time_size) / 2.0, time_size, true, theme.text, TextAlign::Left);

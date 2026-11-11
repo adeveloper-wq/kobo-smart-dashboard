@@ -15,6 +15,13 @@ impl Rect {
         px >= self.x && px <= (self.x + self.w) && py >= self.y && py <= (self.y + self.h)
     }
 
+    /// Euclidean distance from point `(px, py)` to this rectangle (`0.0` if inside).
+    pub fn distance_to(&self, px: f32, py: f32) -> f32 {
+        let dx = (self.x - px).max(0.0).max(px - (self.x + self.w));
+        let dy = (self.y - py).max(0.0).max(py - (self.y + self.h));
+        dx.hypot(dy)
+    }
+
     pub fn inset(&self, padding: f32) -> Self {
         Self {
             x: self.x + padding,
