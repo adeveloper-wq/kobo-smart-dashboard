@@ -69,7 +69,7 @@ impl Theme {
             idle: Tone::new(Color::rgb(60, 60, 60), Color::rgb(238, 238, 238), WHITE),
             weather: WeatherInk {
                 line: ink,
-                sun: Color::rgb(160, 160, 160),
+                sun: WHITE,
                 cloud: WHITE,
                 rain: ink,
             },

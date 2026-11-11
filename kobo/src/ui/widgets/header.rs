@@ -95,9 +95,8 @@ fn draw_battery(canvas: &mut Canvas, theme: &Theme, x: f32, y: f32, pct: u8, cha
     canvas.stroke_rounded_rect(x, y, w, h, 5.0, 2.5, theme.text);
     canvas.fill_rounded_rect(x + w + 1.5, y + 7.0, 4.0, 8.0, 1.5, theme.text);
     let level = pct as f32 / 100.0;
-    let color = if pct <= 15 { theme.heat.solid } else { theme.text };
     if level > 0.02 {
-        canvas.fill_rounded_rect(x + 4.0, y + 4.0, (w - 8.0) * level, h - 8.0, 2.5, color);
+        canvas.fill_rounded_rect(x + 4.0, y + 4.0, (w - 8.0) * level, h - 8.0, 2.5, theme.text);
     }
     if charging {
         // A bolt with a light outline reads on both the filled and the empty part.
@@ -191,16 +190,16 @@ pub fn render_header(
     let top = 26.0;
     let row_h = 76.0;
 
-    let (dot, status_text, status_short) = if status.is_demo {
-        (theme.warm.solid, i18n::t("header.demo"), None)
+    let (status_solid_dot, status_text, status_short) = if status.is_demo {
+        (false, i18n::t("header.demo"), None)
     } else if status.is_live {
         let t = status
             .last_update
             .map(|t| format_time(&to_local(t, theme_cfg), theme_cfg))
             .unwrap_or_default();
-        (theme.eco.solid, i18n::tf("header.live", &[("time", &t)]), Some(i18n::t("header.live_short")))
+        (true, i18n::tf("header.live", &[("time", &t)]), Some(i18n::t("header.live_short")))
     } else {
-        (theme.heat.solid, i18n::t("header.offline"), None)
+        (false, i18n::t("header.offline"), None)
     };
     let battery_label = status.battery.map(|pct| i18n::tf("meta.percent", &[("value", &pct.to_string())]));
     let n_buttons = if status.frontlight.is_some() { 3.0 } else { 2.0 };
@@ -243,7 +242,7 @@ pub fn render_header(
     let mut sx = right;
     if let Some(up) = status.wifi_up {
         sx -= 30.0;
-        canvas.draw_icon(if up { "wifi" } else { "wifi_off" }, sx, top + 4.0, 30.0, if up { theme.text } else { theme.heat.solid }, 2.2);
+        canvas.draw_icon(if up { "wifi" } else { "wifi_off" }, sx, top + 4.0, 30.0, theme.text, 2.2);
         sx -= 18.0;
     }
     if let (Some(pct), Some(label)) = (status.battery, &battery_label) {
@@ -264,7 +263,13 @@ pub fn render_header(
     canvas.draw_text(&weekday, dx, top + 6.0, 28.0, true, theme.text, TextAlign::Left);
     canvas.draw_text(&date, dx, top + 42.0, 24.0, false, theme.text_muted, TextAlign::Left);
     canvas.draw_text(text, right, top + 46.0, 22.0, false, theme.text_muted, TextAlign::Right);
-    canvas.fill_circle(right - tw - 14.0, top + 46.0 + 11.0, 7.0, dot);
+    let dot_x = right - tw - 14.0;
+    let dot_y = top + 46.0 + 11.0;
+    if status_solid_dot {
+        canvas.fill_circle(dot_x, dot_y, 7.0, theme.text);
+    } else {
+        canvas.stroke_circle(dot_x, dot_y, 6.0, 2.2, theme.text);
+    }
 
     let mut y = top + row_h + 20.0;
 

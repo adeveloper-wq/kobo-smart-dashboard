@@ -567,6 +567,7 @@ pub fn draw_weather_art(pixmap: &mut PixmapMut, condition: &str, x: f32, y: f32,
 
     let sun_at = |pm: &mut PixmapMut, cx: f32, cy: f32, r: f32| {
         fill(pm, build(|pb| pb.push_circle(cx, cy, r)), ink.sun, t);
+        outline(pm, build(|pb| pb.push_circle(cx, cy, r)), ink.line, t);
         outline(
             pm,
             build(|pb| {
@@ -577,7 +578,7 @@ pub fn draw_weather_art(pixmap: &mut PixmapMut, condition: &str, x: f32, y: f32,
                     pb.line_to(cx + sx * (r + 3.8), cy + sy * (r + 3.8));
                 }
             }),
-            ink.sun,
+            ink.line,
             t,
         );
     };
@@ -635,7 +636,7 @@ pub fn draw_weather_art(pixmap: &mut PixmapMut, condition: &str, x: f32, y: f32,
                     pb.line_to(14.0, 14.0);
                     pb.close();
                 }),
-                ink.sun,
+                ink.line,
                 t,
             );
         }

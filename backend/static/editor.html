@@ -14,8 +14,8 @@
       --text-muted: #a1a1aa;
       --primary: #ffffff;
       --primary-hover: #e4e4e7;
-      --success: #22c55e;
-      --danger: #ef4444;
+      --success: #ffffff;
+      --danger: #a1a1aa;
       --radius: 10px;
     }
 
@@ -64,7 +64,7 @@
       color: #fafafa;
       border: 1px solid var(--border);
     }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffffff; }
 
     button {
       padding: 8px 16px;
@@ -214,7 +214,9 @@
     }
     .ks-clock { font-size: 40px; font-weight: 900; color: #000; line-height: 1; }
     .ks-date { font-size: 16px; color: #222; font-weight: 700; margin-top: 4px; }
-    .ks-icons { display: flex; gap: 14px; font-size: 16px; font-weight: 700; color: #000; filter: grayscale(100%); align-items: center; }
+    .ks-icons { display: flex; gap: 14px; font-size: 16px; font-weight: 700; color: #000; align-items: center; }
+    .ks-icon-inline { display: inline-flex; align-items: center; gap: 6px; }
+    .ks-svg-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }
 
     /* 2-column layout rows */
     .ks-grid-row {
@@ -234,7 +236,7 @@
     }
     .ks-greeting-flow { font-size: 30px; font-weight: 900; color: #000; line-height: 1.2; overflow-wrap: anywhere; }
     .ks-chip { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
-    .ks-weather-icon { font-size: 28px; filter: grayscale(100%); }
+    .ks-weather-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; }
 
     .ks-weather {
       background: #ffffff;
@@ -273,7 +275,7 @@
       color: #000;
     }
     .ks-fc-day-name { font-weight: 800; font-size: 19px; }
-    .ks-fc-icon { font-size: 36px; margin: 4px 0; filter: grayscale(100%); }
+    .ks-fc-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin: 4px 0; }
     .ks-fc-temp { font-weight: 800; font-size: 21px; }
     .ks-fc-low { font-size: 17px; font-weight: 600; color: #666; margin-left: 3px; }
 
@@ -333,7 +335,6 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      filter: grayscale(100%);
     }
 
     .toast {
@@ -520,9 +521,31 @@
               <div class="ks-date" id="ksDate">Loading...</div>
             </div>
             <div class="ks-icons">
-              <span>🔋 85%</span>
-              <span>📶 Wi-Fi</span>
-              <span>🚪 Exit</span>
+              <span class="ks-icon-inline">
+                <svg class="ks-svg-icon" width="24" height="14" viewBox="0 0 26 16" fill="none" stroke="#000" stroke-width="2">
+                  <rect x="1" y="2" width="20" height="12" rx="2.5"></rect>
+                  <rect x="4" y="5" width="12" height="6" rx="1" fill="#000" stroke="none"></rect>
+                  <rect x="22.5" y="5.5" width="2.5" height="5" rx="1" fill="#000" stroke="none"></rect>
+                </svg>
+                85%
+              </span>
+              <span class="ks-icon-inline">
+                <svg class="ks-svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 8.8c5.6-5.1 14.4-5.1 20 0"></path>
+                  <path d="M5.2 12.6c3.8-3.4 9.8-3.4 13.6 0"></path>
+                  <path d="M8.6 16.3c1.9-1.7 4.9-1.7 6.8 0"></path>
+                  <circle cx="12" cy="19.8" r="1.6" fill="#000" stroke="none"></circle>
+                </svg>
+                Wi-Fi
+              </span>
+              <span class="ks-icon-inline">
+                <svg class="ks-svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4.5"></path>
+                  <path d="M10 12h11"></path>
+                  <path d="M16.5 7.5 21 12l-4.5 4.5"></path>
+                </svg>
+                Exit
+              </span>
             </div>
           </div>
 
@@ -532,7 +555,7 @@
             <div class="ks-greeting" id="ksGreeting">
               <div class="ks-greeting-flow">
                 <span id="ksGreetingTitle">Guten Tag!</span>
-                <span class="ks-chip"><span class="ks-weather-icon" id="ksWeatherIcon">⛅</span><span id="ksTemp">--°</span></span>
+                <span class="ks-chip"><span class="ks-weather-icon" id="ksWeatherIcon"></span><span id="ksTemp">--°</span></span>
               </div>
             </div>
 
@@ -565,7 +588,12 @@
 
           <!-- Sleep Mode Bar -->
           <div class="ks-sleep-bar" id="ksSleepBar">
-            <span>🌙 Ruhemodus</span>
+            <span class="ks-icon-inline">
+              <svg class="ks-svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.5 14.5A8.5 8.5 0 0 1 9 3a8.5 8.5 0 1 0 11.5 11.5Z"></path>
+              </svg>
+              Ruhemodus
+            </span>
             <span id="ksSleepNote">Nächstes Update in 30 Min.</span>
           </div>
 
@@ -808,17 +836,46 @@
       refreshPreview(id);
     }
 
-    function weatherEmoji(cond) {
-      switch(cond) {
-        case 'sunny': return '☀️';
-        case 'partly_cloudy': return '⛅';
-        case 'cloudy': return '☁️';
-        case 'rainy': return '🌧️';
-        case 'snowy': return '❄️';
-        case 'lightning': return '⚡';
-        case 'fog': return '🌫️';
-        default: return '🌤️';
+    function weatherIconSvg(cond, size = 34) {
+      const sun = '<circle cx="12" cy="12" r="5" fill="#fff" stroke="#000" stroke-width="2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="#000" stroke-width="2" stroke-linecap="round"/>';
+      const cloud = '<path d="M7 19c-2.8 0-5-2.1-5-4.8 0-2.5 1.9-4.5 4.3-4.7C7.1 6.6 9.7 4.5 12.8 4.5c3.5 0 6.4 2.7 6.7 6.1 2 .4 3.5 2.2 3.5 4.3 0 2.3-1.8 4.1-4.1 4.1Z" fill="#fff" stroke="#000" stroke-width="2" stroke-linejoin="round"/>';
+      const cloudHigh = '<path d="M7 16c-2.6 0-4.7-2-4.7-4.4 0-2.3 1.8-4.1 4-4.3C7 4.6 9.4 2.7 12.3 2.7c3.2 0 5.9 2.5 6.2 5.6 1.8.4 3.2 2 3.2 3.9 0 2.1-1.6 3.8-3.7 3.8Z" fill="#fff" stroke="#000" stroke-width="2" stroke-linejoin="round"/>';
+      let inner = '';
+      switch (cond) {
+        case 'sunny':
+          inner = sun;
+          break;
+        case 'clear_night':
+        case 'clear-night':
+          inner = '<path d="M20.5 14.5A8.5 8.5 0 0 1 9 3a8.5 8.5 0 1 0 11.5 11.5Z" fill="#fff" stroke="#000" stroke-width="2" stroke-linejoin="round"/>';
+          break;
+        case 'cloudy':
+          inner = cloud;
+          break;
+        case 'rainy':
+        case 'pouring':
+          inner = cloudHigh + '<path d="M8 18.5 6.5 22.5M12.5 18.5 11 22.5M17 18.5 15.5 22.5" stroke="#000" stroke-width="2" stroke-linecap="round"/>';
+          break;
+        case 'snowy':
+        case 'snowy-rainy':
+          inner = cloudHigh + '<circle cx="7.5" cy="20.5" r="1.3" fill="#000"/><circle cx="12.5" cy="21" r="1.3" fill="#000"/><circle cx="17.5" cy="20.5" r="1.3" fill="#000"/>';
+          break;
+        case 'lightning':
+        case 'lightning-rainy':
+          inner = cloudHigh + '<path d="M13 13.5 9 19h3l-1.5 4.5 5-6h-3l1.5-4Z" fill="#000"/>';
+          break;
+        case 'fog':
+          inner = cloudHigh + '<path d="M4.5 19h15M7 22h10" stroke="#000" stroke-width="2" stroke-linecap="round"/>';
+          break;
+        case 'windy':
+        case 'windy-variant':
+          inner = '<path d="M3 8h11.5a2.5 2.5 0 1 0-2-4M3 12h16a2.5 2.5 0 1 1-2 4M3 16h8a2.2 2.2 0 1 1-1.8 3.5" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>';
+          break;
+        default:
+          inner = '<circle cx="8.5" cy="8.5" r="4" fill="#fff" stroke="#000" stroke-width="1.8"/><path d="M8.5 2v1.6M2 8.5h1.6M3.9 3.9l1.1 1.1M13.1 3.9l-1.1 1.1" stroke="#000" stroke-width="1.8" stroke-linecap="round"/><g transform="translate(3,4) scale(0.82)">' + cloud + '</g>';
+          break;
       }
+      return `<svg class="ks-svg-icon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">${inner}</svg>`;
     }
 
     function renderEinkScreen(data) {
@@ -834,7 +891,7 @@
       // Weather + Forecast
       if (data.weather) {
         document.getElementById('ksTemp').textContent = `${Math.round(data.weather.temperature || 0)}°`;
-        document.getElementById('ksWeatherIcon').textContent = weatherEmoji(data.weather.condition);
+        document.getElementById('ksWeatherIcon').innerHTML = weatherIconSvg(data.weather.condition, 32);
 
         // Render 4-day forecast
         const fcContainer = document.getElementById('ksForecastStrip');
@@ -850,7 +907,7 @@
           div.className = 'ks-fc-day';
           div.innerHTML = `
             <span class="ks-fc-day-name">${dayName}</span>
-            <span class="ks-fc-icon">${weatherEmoji(fc.condition)}</span>
+            <span class="ks-fc-icon">${weatherIconSvg(fc.condition, 38)}</span>
             <span class="ks-fc-temp">${Math.round(fc.temperature)}°<span class="ks-fc-low">${fc.templow !== undefined ? Math.round(fc.templow) + '°' : ''}</span></span>
           `;
           fcContainer.appendChild(div);
@@ -952,7 +1009,7 @@
       } catch (e) {}
       showToast("Builder server stopped. You may close this tab.");
       document.getElementById('statusText').textContent = "Offline (Stopped)";
-      document.querySelector('.status-dot').style.background = "#ef4444";
+      document.querySelector('.status-dot').style.background = "#52525b";
     }
 
     init();
