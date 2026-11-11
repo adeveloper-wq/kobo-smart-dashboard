@@ -110,8 +110,8 @@
       ],
       "sleep_mode": {
         "enabled": true,
-        "sleep_after_secs": 30,
-        "update_interval_seconds": 1800,
+        "display_update_interval_seconds": 60,
+        "wifi_update_interval_seconds": 1800,
         "sleep_until_next_period": false
       }
     },
@@ -128,8 +128,8 @@
       ],
       "sleep_mode": {
         "enabled": true,
-        "sleep_after_secs": 30,
-        "update_interval_seconds": 1800,
+        "display_update_interval_seconds": 60,
+        "wifi_update_interval_seconds": 1800,
         "sleep_until_next_period": false
       }
     },
@@ -145,8 +145,8 @@
       ],
       "sleep_mode": {
         "enabled": true,
-        "sleep_after_secs": 30,
-        "update_interval_seconds": 3600,
+        "display_update_interval_seconds": 60,
+        "wifi_update_interval_seconds": 3600,
         "sleep_until_next_period": false
       }
     },
@@ -162,8 +162,6 @@
       ],
       "sleep_mode": {
         "enabled": true,
-        "sleep_after_secs": 15,
-        "update_interval_seconds": 7200,
         "sleep_until_next_period": true
       }
     }

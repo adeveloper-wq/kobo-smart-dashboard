@@ -121,7 +121,12 @@ def find_active_schedule(config: dict, now: datetime) -> dict:
             "start_time": "00:00",
             "end_time": "23:59",
             "greetings": ["Guten Tag!", "Hallo zusammen!", "Moin!"],
-            "sleep_mode": {"enabled": True, "update_interval_seconds": 1800, "sleep_after_secs": 30}
+            "sleep_mode": {
+                "enabled": True,
+                "display_update_interval_seconds": 60,
+                "wifi_update_interval_seconds": 1800,
+                "sleep_until_next_period": False
+            }
         }
 
     cur_time = now.time()
@@ -143,26 +148,78 @@ def get_next_occurrence(time_str: str, now: datetime) -> datetime:
     return target
 
 
+def validate_config(config: dict) -> Optional[str]:
+    """Validate that schedule sleep_mode combinations are mutually consistent."""
+    schedules = config.get("schedules")
+    if not isinstance(schedules, list):
+        return "Missing or invalid 'schedules' list"
+
+    for idx, s in enumerate(schedules):
+        label = s.get("name") or s.get("id") or f"#{idx + 1}"
+        sm = s.get("sleep_mode", {})
+        if not isinstance(sm, dict):
+            return f"Schedule '{label}': 'sleep_mode' must be an object"
+
+        enabled = sm.get("enabled", True)
+        sleep_until_next = sm.get("sleep_until_next_period", False)
+        wifi_interval = sm.get("wifi_update_interval_seconds")
+        legacy_interval = sm.get("update_interval_seconds")
+        display_interval = sm.get("display_update_interval_seconds")
+        has_wifi = wifi_interval is not None or legacy_interval is not None
+        has_display = display_interval is not None
+
+        if not enabled:
+            if sleep_until_next:
+                return f"Schedule '{label}': 'sleep_until_next_period' cannot be true when sleep mode is disabled"
+            if has_wifi:
+                return f"Schedule '{label}': Wi-Fi update interval cannot be set when sleep mode is disabled"
+            if has_display:
+                return f"Schedule '{label}': Display update interval cannot be set when sleep mode is disabled"
+        elif sleep_until_next:
+            if has_wifi:
+                return f"Schedule '{label}': Wi-Fi update interval cannot be set when 'sleep_until_next_period' is enabled"
+            if has_display:
+                return f"Schedule '{label}': Display update interval cannot be set when 'sleep_until_next_period' is enabled"
+        else:
+            effective_wifi = wifi_interval if wifi_interval is not None else (1800 if legacy_interval is None else legacy_interval)
+            if isinstance(effective_wifi, bool) or not isinstance(effective_wifi, (int, float)) or effective_wifi < 120 or effective_wifi > 43200:
+                return f"Schedule '{label}': Wi-Fi update interval must be between 120 and 43200 seconds"
+            if has_display:
+                if isinstance(display_interval, bool) or not isinstance(display_interval, (int, float)) or display_interval < 60:
+                    return f"Schedule '{label}': Display update interval must be at least 60 seconds"
+                if display_interval >= effective_wifi:
+                    return f"Schedule '{label}': Display update interval must be shorter than Wi-Fi update interval"
+
+    return None
+
+
 def calculate_next_update(config: dict, schedule: dict, now: datetime, next_event_time: datetime = None) -> dict:
     """
-    Precalculate when the Kobo should wake up and turn Wi-Fi on again.
+    Precalculate when the Kobo should wake up for Wi-Fi data fetch and optional offline clock ticks.
     Considers:
-    1. Schedule end time (period transition)
-    2. Upcoming calendar event
-    3. Configured update interval
-    4. Sleep until next period setting (e.g. at night)
+    1. Sleep mode enabled/disabled
+    2. Sleep until next period setting (e.g. at night)
+    3. Configured Wi-Fi fetch interval, schedule end time, and upcoming calendar event
+    4. Optional display-only (clock) wakeup interval with Wi-Fi kept off
     """
     sleep_cfg = schedule.get("sleep_mode", {})
-    enabled = sleep_cfg.get("enabled", True)
-    sleep_after = sleep_cfg.get("sleep_after_secs", 30)
-    default_interval = sleep_cfg.get("update_interval_seconds", 1800)
-    sleep_until_next = sleep_cfg.get("sleep_until_next_period", False)
+    enabled = bool(sleep_cfg.get("enabled", True))
+    sleep_until_next = bool(sleep_cfg.get("sleep_until_next_period", False)) if enabled else False
+    raw_wifi = sleep_cfg.get("wifi_update_interval_seconds")
+    if raw_wifi is None:
+        raw_wifi = sleep_cfg.get("update_interval_seconds")
+    default_interval = int(raw_wifi or 1800)
+
+    raw_display = sleep_cfg.get("display_update_interval_seconds")
+    display_interval = int(raw_display) if (enabled and not sleep_until_next and raw_display is not None) else None
 
     end_time_str = schedule.get("end_time", "23:59")
     period_end = get_next_occurrence(end_time_str, now)
     seconds_to_period_end = max(120, int((period_end - now).total_seconds()))
 
-    if sleep_until_next:
+    if not enabled:
+        wake_seconds = min(1800, seconds_to_period_end)
+    elif sleep_until_next:
         # Deep sleep until the next schedule begins
         wake_seconds = seconds_to_period_end
     else:
@@ -178,6 +235,8 @@ def calculate_next_update(config: dict, schedule: dict, now: datetime, next_even
 
     # Clamp to reasonable limits (at least 2 minutes, at most 12 hours)
     wake_seconds = max(120, min(wake_seconds, 43200))
+    if display_interval is not None and (display_interval < 60 or display_interval >= wake_seconds):
+        display_interval = None
 
     wake_dt = now + timedelta(seconds=wake_seconds)
     time_fmt = config.get("theme", {}).get("time_format", "24h")
@@ -188,10 +247,10 @@ def calculate_next_update(config: dict, schedule: dict, now: datetime, next_even
 
     return {
         "enabled": enabled,
-        "sleep_after_secs": sleep_after,
         "sleep_wake_secs": wake_seconds,
+        "display_update_interval_secs": display_interval,
         "next_update_at": wake_dt.isoformat(),
-        "sleep_note": f"Nächstes Update um {formatted_wake}",
+        "sleep_note": f"Nächstes Update um {formatted_wake}" if enabled else None,
         "wake_time_formatted": formatted_wake
     }
 
@@ -568,9 +627,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 raw_body = self.rfile.read(content_len).decode("utf-8")
                 new_config = json.loads(raw_body)
                 
-                # Basic validation
-                if "schedules" not in new_config:
-                    self.send_json({"status": "error", "message": "Missing 'schedules' key"}, status=400)
+                # Validate config structure and mutually exclusive sleep_mode rules
+                err = validate_config(new_config)
+                if err:
+                    self.send_json({"status": "error", "message": err}, status=400)
                     return
 
                 save_config(new_config)

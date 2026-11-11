@@ -248,7 +248,7 @@ impl ScreenRenderer {
                 Rect::new(SIDE_PAD, h - SLEEP_NOTE_H + 4.0, w - 2.0 * SIDE_PAD, SLEEP_NOTE_H - 28.0)
             };
             self.render_sleep_note(canvas, bar, &next);
-            self.targets.clear();
+            self.targets.retain(|t| matches!(t.action, UiAction::ExitToReader));
         }
     }
 

@@ -2,6 +2,7 @@
 Comprehensive test suite for the Python backend using only standard library unittest.
 """
 
+import json
 import unittest
 from datetime import datetime, date, time as dtime, timedelta, timezone
 from pathlib import Path
@@ -88,7 +89,8 @@ class TestCalendarParser(unittest.TestCase):
 
 class TestServerLogic(unittest.TestCase):
     def setUp(self):
-        self.config = server.load_config()
+        with open(BACKEND_DIR / "config.example.json", "r", encoding="utf-8") as f:
+            self.config = json.load(f)
 
     def test_time_range_overnight(self):
         # 22:30 to 06:00
@@ -165,13 +167,73 @@ class TestServerLogic(unittest.TestCase):
     def test_next_update_precalculation(self):
         tz = timezone.utc
         now = datetime(2026, 11, 10, 10, 0, tzinfo=tz)
-        sched = {"end_time": "12:00", "sleep_mode": {"enabled": True, "sleep_after_secs": 30, "update_interval_seconds": 1800}}
+        sched = {
+            "end_time": "12:00",
+            "sleep_mode": {
+                "enabled": True,
+                "display_update_interval_seconds": 60,
+                "wifi_update_interval_seconds": 1800
+            }
+        }
         update = server.calculate_next_update(self.config, sched, now)
         self.assertIn("sleep_wake_secs", update)
         self.assertGreaterEqual(update["sleep_wake_secs"], 120)
-        self.assertEqual(update["sleep_after_secs"], 30)
+        self.assertEqual(update["display_update_interval_secs"], 60)
+        self.assertNotIn("sleep_after_secs", update)
         self.assertTrue(update["enabled"])
-        self.assertIn("sleep_note", update)
+        self.assertIsNotNone(update["sleep_note"])
+
+        # Disabled sleep mode hides sleep note and clears display_update_interval_secs
+        disabled_sched = {"end_time": "12:00", "sleep_mode": {"enabled": False, "sleep_until_next_period": True}}
+        disabled_update = server.calculate_next_update(self.config, disabled_sched, now)
+        self.assertFalse(disabled_update["enabled"])
+        self.assertIsNone(disabled_update["display_update_interval_secs"])
+        self.assertIsNone(disabled_update["sleep_note"])
+
+        # Sleep until next period uses remaining time until end_time and disables display-only ticks
+        until_end_sched = {"end_time": "12:00", "sleep_mode": {"enabled": True, "sleep_until_next_period": True}}
+        until_end_update = server.calculate_next_update(self.config, until_end_sched, now)
+        self.assertTrue(until_end_update["enabled"])
+        self.assertIsNone(until_end_update["display_update_interval_secs"])
+        self.assertEqual(until_end_update["sleep_wake_secs"], 7200)
+
+    def test_validate_config_rejects_conflicting_sleep_mode(self):
+        self.assertIsNone(server.validate_config(self.config))
+
+        bad_disabled_until = {
+            "schedules": [{"id": "m", "sleep_mode": {"enabled": False, "sleep_until_next_period": True}}]
+        }
+        self.assertIsNotNone(server.validate_config(bad_disabled_until))
+
+        bad_disabled_interval = {
+            "schedules": [{"id": "m", "sleep_mode": {"enabled": False, "wifi_update_interval_seconds": 1800}}]
+        }
+        self.assertIsNotNone(server.validate_config(bad_disabled_interval))
+
+        bad_disabled_display = {
+            "schedules": [{"id": "m", "sleep_mode": {"enabled": False, "display_update_interval_seconds": 60}}]
+        }
+        self.assertIsNotNone(server.validate_config(bad_disabled_display))
+
+        bad_until_interval = {
+            "schedules": [{"id": "m", "sleep_mode": {"enabled": True, "sleep_until_next_period": True, "wifi_update_interval_seconds": 1800}}]
+        }
+        self.assertIsNotNone(server.validate_config(bad_until_interval))
+
+        bad_short_interval = {
+            "schedules": [{"id": "m", "sleep_mode": {"enabled": True, "sleep_until_next_period": False, "wifi_update_interval_seconds": 60}}]
+        }
+        self.assertIsNotNone(server.validate_config(bad_short_interval))
+
+        bad_display_ge_wifi = {
+            "schedules": [{"id": "m", "sleep_mode": {"enabled": True, "sleep_until_next_period": False, "display_update_interval_seconds": 1800, "wifi_update_interval_seconds": 1800}}]
+        }
+        self.assertIsNotNone(server.validate_config(bad_display_ge_wifi))
+
+        bad_display_too_short = {
+            "schedules": [{"id": "m", "sleep_mode": {"enabled": True, "sleep_until_next_period": False, "display_update_interval_seconds": 30, "wifi_update_interval_seconds": 1800}}]
+        }
+        self.assertIsNotNone(server.validate_config(bad_display_too_short))
 
 
 if __name__ == "__main__":

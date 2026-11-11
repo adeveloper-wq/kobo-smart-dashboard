@@ -202,7 +202,7 @@ pub fn render_header(
         (false, i18n::t("header.offline"), None)
     };
     let battery_label = status.battery.map(|pct| i18n::tf("meta.percent", &[("value", &pct.to_string())]));
-    let n_buttons = if status.frontlight.is_some() { 3.0 } else { 2.0 };
+    let n_buttons = 1.0;
 
     let texts = HeaderTexts {
         time: &time_str,
@@ -220,22 +220,13 @@ pub fn render_header(
     let time_w = canvas.measure_text(&time_str, time_size, true).0;
     let dx = SIDE_PAD + time_w + pad;
 
-    // Exit + refresh buttons (big touch targets), centred in the row
+    // Exit button only (dashboard is non-interactive aside from leaving)
     let by = top + (row_h - btn) / 2.0;
     let exit_rect = Rect::new(w - SIDE_PAD - btn, by, btn, btn);
-    let refresh_rect = Rect::new(exit_rect.x - gap - btn, by, btn, btn);
     draw_header_button(canvas, theme, exit_rect, "logout");
-    draw_header_button(canvas, theme, refresh_rect, "refresh");
     targets.push(InteractiveTarget { rect: exit_rect.inset(-8.0), action: UiAction::ExitToReader });
-    targets.push(InteractiveTarget { rect: refresh_rect.inset(-8.0), action: UiAction::Refresh });
 
-    let mut leftmost = refresh_rect.x;
-    if let Some(on) = status.frontlight {
-        let light_rect = Rect::new(refresh_rect.x - gap - btn, by, btn, btn);
-        draw_header_button(canvas, theme, light_rect, if on { "lightbulb_on" } else { "lightbulb" });
-        targets.push(InteractiveTarget { rect: light_rect.inset(-8.0), action: UiAction::ToggleFrontlight });
-        leftmost = light_rect.x;
-    }
+    let leftmost = exit_rect.x;
 
     // Status block, right aligned before the buttons
     let right = leftmost - pad;
@@ -295,7 +286,6 @@ pub fn render_header(
             let start = seg.x + (seg.w - (icon_size + 10.0 + lw)) / 2.0;
             canvas.draw_icon(&page.icon, start, y + (tab_h - icon_size) / 2.0, icon_size, color, 2.2);
             canvas.draw_text(&label, start + icon_size + 10.0, y + tab_h / 2.0 - 13.0, 24.0, true, color, TextAlign::Left);
-            targets.push(InteractiveTarget { rect: seg, action: UiAction::SwitchPage(idx) });
         }
         y += tab_h + 20.0;
     }

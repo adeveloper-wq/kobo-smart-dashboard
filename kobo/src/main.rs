@@ -243,22 +243,23 @@ async fn run_device(
     };
 
     let mut light = frontlight::Frontlight::detect();
-    let light_timeout = Duration::from_secs(config.device.frontlight_timeout_secs as u64);
-    let mut light_dimmed = false;
-    let mut last_activity = Instant::now();
-    renderer.frontlight = light.as_ref().map(|l| l.is_on());
+    renderer.frontlight = None;
 
     let wifi_script = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|d| d.join("wifi.sh")))
         .unwrap_or_else(|| PathBuf::from("/mnt/onboard/.kobo-ha/wifi.sh"));
 
-    // Deep sleep is 100% defined and scheduled by the Python backend!
+    // Deep sleep is 100% defined and scheduled by the Python backend config!
     let (mut current_states, initial_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
+    let mut last_fetch = Instant::now();
 
     let mut sleep_backend_enabled = initial_sleep.as_ref().map(|s| s.enabled).unwrap_or(true);
-    let mut sleep_after = Duration::from_secs(initial_sleep.as_ref().map(|s| s.sleep_after_secs as u64).unwrap_or(30));
     let mut sleep_wake = Duration::from_secs(initial_sleep.as_ref().map(|s| s.sleep_wake_secs as u64).unwrap_or(1800));
+    let mut display_wake: Option<u64> = initial_sleep
+        .as_ref()
+        .and_then(|s| s.display_update_interval_secs.map(|d| d as u64))
+        .filter(|&d| d >= 60 && d < sleep_wake.as_secs());
 
     let sleep_hw_supported = power::sleep_unsupported_reason(&wifi_script).is_none();
     if !sleep_hw_supported {
@@ -267,19 +268,25 @@ async fn run_device(
 
     let mut apply_backend_sleep = |s: &BackendSleepInfo| {
         sleep_backend_enabled = s.enabled;
-        sleep_after = Duration::from_secs(s.sleep_after_secs.max(5) as u64);
-        sleep_wake = Duration::from_secs(s.sleep_wake_secs.max(120) as u64);
-        tracing::info!("Backend sleep settings: enabled={}, after={:?}, wake_interval={:?}", sleep_backend_enabled, sleep_after, sleep_wake);
+        let wifi_secs = s.sleep_wake_secs.max(120) as u64;
+        sleep_wake = Duration::from_secs(wifi_secs);
+        display_wake = s.display_update_interval_secs
+            .map(|d| d as u64)
+            .filter(|&d| d >= 60 && d < wifi_secs);
+        tracing::info!(
+            "Backend sleep settings: enabled={}, wifi_wake={:?}, display_wake={:?}",
+            sleep_backend_enabled,
+            sleep_wake,
+            display_wake
+        );
     };
 
     if let Some(s) = &initial_sleep {
         apply_backend_sleep(s);
     }
 
-    let mut ignore_power_until = Instant::now();
     let mut sleep_failures = 0u32;
-    let mut sleep_requested = false;
-    let mut last_power_press = Instant::now() - Duration::from_secs(10);
+    let mut wifi_restoring = false;
 
     renderer.render(&mut canvas, &config, 0, &current_states, true);
     flush(&mut fb, &canvas, true);
@@ -288,14 +295,14 @@ async fn run_device(
     clock.tick().await;
 
     loop {
-        let light_deadline = match &light {
-            Some(l) if l.is_on() && !light_timeout.is_zero() => Some(tokio::time::Instant::from_std(last_activity + light_timeout)),
-            _ => None,
-        };
-        let sleep_deadline = if sleep_requested {
+        let can_sleep = sleep_backend_enabled && sleep_hw_supported && sleep_failures < 3 && !power::is_plugged() && !wifi_restoring;
+        let sleep_deadline = if can_sleep {
             Some(tokio::time::Instant::now())
-        } else if sleep_backend_enabled && sleep_hw_supported && sleep_failures < 3 {
-            Some(tokio::time::Instant::from_std(last_activity + sleep_after))
+        } else {
+            None
+        };
+        let refresh_deadline = if !can_sleep && !wifi_restoring {
+            Some(tokio::time::Instant::from_std(last_fetch + sleep_wake))
         } else {
             None
         };
@@ -307,71 +314,114 @@ async fn run_device(
                     None => std::future::pending::<()>().await,
                 }
             } => {
-                sleep_requested = false;
                 if power::is_plugged() {
                     tracing::info!("Sleep postponed: device is plugged in");
-                    last_activity = Instant::now();
                     continue;
                 }
-                tracing::info!("Entering backend-scheduled sleep mode (waking in {:?})", sleep_wake);
-                let light_was_on = light.as_ref().map(|l| l.is_on()).unwrap_or(false) || light_dimmed;
-                let mut woke_by_button = false;
+                tracing::info!(
+                    "Entering backend-scheduled sleep mode (wifi_wake={:?}, display_wake={:?})",
+                    sleep_wake,
+                    display_wake
+                );
+                #[derive(Copy, Clone, PartialEq, Eq)]
+                enum WakeReason {
+                    ClockOnly,
+                    WifiFetch,
+                }
+                let mut should_exit = false;
                 let mut wifi_down = false;
+                let mut wifi_is_on = true;
+                let mut next_wifi_at = chrono::Utc::now()
+                    + chrono::Duration::from_std(sleep_wake).unwrap_or_else(|_| chrono::Duration::minutes(15));
+                let mut last_wake = WakeReason::WifiFetch;
+                let mut first_sleep_render = true;
                 if let Some(l) = light.as_mut() {
                     l.set_on(false);
-                    renderer.frontlight = Some(false);
                 }
                 loop {
-                    let next = ui::widgets::header::now_local(&config.theme)
-                        + chrono::Duration::from_std(sleep_wake).unwrap_or_else(|_| chrono::Duration::minutes(15));
-                    let next_time_str = ui::widgets::header::format_time(&next, &config.theme);
+                    let next_local = ui::widgets::header::to_local(next_wifi_at, &config.theme);
+                    let next_time_str = ui::widgets::header::format_time(&next_local, &config.theme);
                     let sleep_note_text = format!("{} {}", i18n::t("sleep.next"), next_time_str);
                     renderer.sleep_until = Some(sleep_note_text);
-                    renderer.render(&mut canvas, &config, 0, &current_states, false);
-                    flush(&mut fb, &canvas, true);
+                    renderer.render(&mut canvas, &config, 0, &current_states, wifi_is_on);
+                    let full_refresh = first_sleep_render || last_wake == WakeReason::WifiFetch;
+                    flush(&mut fb, &canvas, full_refresh);
+                    first_sleep_render = false;
 
-                    let wait_until = tokio::time::Instant::now() + Duration::from_secs(7);
-                    let mut cancelled = false;
-                    while !cancelled {
+                    let exit_wait = if last_wake == WakeReason::ClockOnly {
+                        Duration::from_millis(600)
+                    } else {
+                        Duration::from_secs(7)
+                    };
+                    let wait_until = tokio::time::Instant::now() + exit_wait;
+                    while tokio::time::Instant::now() < wait_until {
                         tokio::select! {
                             _ = tokio::time::sleep_until(wait_until) => break,
-                            Some(ev) = touch_driver.recv() => cancelled = wants_awake(&ev, last_power_press, ignore_power_until),
+                            Some(ev) = touch_driver.recv() => {
+                                if is_exit_event(&ev, &renderer, &mut last_tap) {
+                                    should_exit = true;
+                                    break;
+                                }
+                            }
                         }
                     }
-                    if cancelled {
-                        tracing::info!("Sleep cancelled by a tap or the power button");
-                        woke_by_button = true;
+                    if should_exit {
+                        tracing::info!("Exiting dashboard from sleep screen");
+                        wifi_down = !wifi_is_on;
                         break;
                     }
 
                     if power::is_plugged() {
                         tracing::info!("Plugged in: staying awake");
+                        wifi_down = !wifi_is_on;
                         break;
                     }
-                    let script = wifi_script.clone();
-                    if !tokio::task::spawn_blocking(move || power::wifi(&script, false)).await.unwrap_or(false) {
-                        tracing::warn!("Could not switch Wi-Fi off; not suspending");
+                    if wifi_is_on {
                         let script = wifi_script.clone();
-                        let _ = tokio::task::spawn_blocking(move || power::wifi(&script, true)).await;
-                        break;
+                        if !tokio::task::spawn_blocking(move || power::wifi(&script, false)).await.unwrap_or(false) {
+                            tracing::warn!("Could not switch Wi-Fi off; not suspending");
+                            let script = wifi_script.clone();
+                            let _ = tokio::task::spawn_blocking(move || power::wifi(&script, true)).await;
+                            wifi_down = false;
+                            break;
+                        }
+                        wifi_is_on = false;
                     }
-                    let mut cancelled = false;
                     while let Some(ev) = touch_driver.try_recv() {
-                        cancelled |= wants_awake(&ev, last_power_press, ignore_power_until);
+                        if is_exit_event(&ev, &renderer, &mut last_tap) {
+                            should_exit = true;
+                            break;
+                        }
                     }
-                    if cancelled {
-                        tracing::info!("Sleep cancelled while Wi-Fi going down");
-                        woke_by_button = true;
+                    if should_exit {
+                        tracing::info!("Exiting dashboard while Wi-Fi going down");
                         wifi_down = true;
                         break;
                     }
-                    if let Err(e) = power::set_alarm(sleep_wake.as_secs()) {
+
+                    let now_utc = chrono::Utc::now();
+                    let secs_to_wifi = (next_wifi_at - now_utc).num_seconds().max(5) as u64;
+                    let (wait_secs, planned_wake) = if let Some(step) = display_wake {
+                        let step_i64 = step as i64;
+                        let mut to_next_tick = (step_i64 - now_utc.timestamp().rem_euclid(step_i64)) as u64;
+                        if to_next_tick < 5 {
+                            to_next_tick += step;
+                        }
+                        if secs_to_wifi <= to_next_tick + 10 || secs_to_wifi <= 15 {
+                            (secs_to_wifi, WakeReason::WifiFetch)
+                        } else {
+                            (to_next_tick, WakeReason::ClockOnly)
+                        }
+                    } else {
+                        (secs_to_wifi, WakeReason::WifiFetch)
+                    };
+
+                    if let Err(e) = power::set_alarm(wait_secs) {
                         tracing::warn!("Could not set wakeup alarm ({}); not suspending", e);
-                        let script = wifi_script.clone();
-                        let _ = tokio::task::spawn_blocking(move || power::wifi(&script, true)).await;
+                        wifi_down = true;
                         break;
                     }
-                    let alarm_at = chrono::Utc::now() + chrono::Duration::from_std(sleep_wake).unwrap_or_default();
+                    let alarm_at = chrono::Utc::now() + chrono::Duration::seconds(wait_secs as i64);
                     let mut suspended = Err(String::new());
                     for attempt in 1..=3 {
                         suspended = tokio::task::spawn_blocking(power::suspend).await.unwrap_or_else(|e| Err(e.to_string()));
@@ -386,62 +436,72 @@ async fn run_device(
                     }
                     power::clear_alarm();
                     sleep_failures = if suspended.is_ok() { 0 } else { sleep_failures + 1 };
-                    let woke_early = chrono::Utc::now() < alarm_at - chrono::Duration::seconds(20);
-                    if woke_early {
-                        ignore_power_until = Instant::now() + Duration::from_secs(5);
-                    }
+                    let early_margin = (wait_secs / 3).clamp(4, 20) as i64;
+                    let woke_early = chrono::Utc::now() < alarm_at - chrono::Duration::seconds(early_margin);
                     match &suspended {
                         Ok(()) if woke_early => tracing::info!("Woke up: power button"),
-                        Ok(()) => tracing::info!("Woke up: timer"),
+                        Ok(()) if planned_wake == WakeReason::ClockOnly => tracing::info!("Woke up: clock display tick"),
+                        Ok(()) => tracing::info!("Woke up: Wi-Fi sync timer"),
                         Err(_) => tracing::warn!("The kernel refused to suspend"),
                     }
                     if suspended.is_ok() {
                         power::log_wakeup_reason();
                     }
                     power::sync();
-                    woke_by_button = suspended.is_ok() && woke_early;
-                    tokio::time::sleep(Duration::from_millis(1500)).await;
+                    let settle_ms = if planned_wake == WakeReason::ClockOnly { 600 } else { 1500 };
+                    tokio::time::sleep(Duration::from_millis(settle_ms)).await;
                     touch_driver.drain();
                     if suspended.is_err() || woke_early {
                         wifi_down = true;
                         break;
                     }
 
+                    if planned_wake == WakeReason::ClockOnly {
+                        last_wake = WakeReason::ClockOnly;
+                        power::log_battery();
+                        continue;
+                    }
+
                     let script = wifi_script.clone();
                     let wifi_ok = tokio::task::spawn_blocking(move || power::wifi(&script, true)).await.unwrap_or(false);
                     if wifi_ok {
+                        wifi_is_on = true;
                         let (new_states, new_sleep) = tokio::time::timeout(
                             Duration::from_secs(20),
                             fetch_and_update(&backend, &mut config, &mut renderer)
                         ).await.unwrap_or((current_states.clone(), None));
                         current_states = new_states;
+                        last_fetch = Instant::now();
                         if let Some(s) = &new_sleep {
                             apply_backend_sleep(s);
                         }
                     }
+                    next_wifi_at = chrono::Utc::now()
+                        + chrono::Duration::from_std(sleep_wake).unwrap_or_else(|_| chrono::Duration::minutes(15));
+                    last_wake = WakeReason::WifiFetch;
                     power::log_battery();
+                    if !sleep_backend_enabled {
+                        wifi_down = !wifi_is_on;
+                        break;
+                    }
                 }
                 renderer.sleep_until = None;
-                light_dimmed = false;
-                if light_was_on {
-                    if woke_by_button {
-                        if let Some(l) = light.as_mut() {
-                            l.set_on(true);
-                            renderer.frontlight = Some(true);
-                        }
-                    } else {
-                        light_dimmed = true;
+                if should_exit {
+                    if wifi_down {
+                        let script = wifi_script.clone();
+                        let _ = tokio::task::spawn_blocking(move || power::wifi(&script, true)).await;
                     }
+                    break;
                 }
                 if sleep_failures >= 3 {
                     tracing::warn!("Sleep mode: 3 failed attempts in a row, staying awake");
                 }
-                last_activity = Instant::now();
                 renderer.render(&mut canvas, &config, 0, &current_states, !wifi_down);
                 flush(&mut fb, &canvas, true);
                 tracing::info!("Left sleep mode");
                 power::sync();
                 if wifi_down {
+                    wifi_restoring = true;
                     let script = wifi_script.clone();
                     let tx = wake_tx.clone();
                     tokio::spawn(async move {
@@ -453,45 +513,24 @@ async fn run_device(
             }
 
             _ = async {
-                match light_deadline {
+                match refresh_deadline {
                     Some(at) => tokio::time::sleep_until(at).await,
                     None => std::future::pending::<()>().await,
                 }
             } => {
-                if let Some(l) = light.as_mut() {
-                    tracing::info!("No taps for {:?}, switching frontlight off", light_timeout);
-                    l.set_on(false);
-                    light_dimmed = true;
-                    renderer.frontlight = Some(false);
-                    renderer.render(&mut canvas, &config, 0, &current_states, true);
-                    flush(&mut fb, &canvas, false);
+                let (new_states, new_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
+                current_states = new_states;
+                last_fetch = Instant::now();
+                if let Some(s) = &new_sleep {
+                    apply_backend_sleep(s);
                 }
+                renderer.render(&mut canvas, &config, 0, &current_states, true);
+                flush(&mut fb, &canvas, true);
             }
 
             event = touch_driver.recv() => {
                 let Some(event) = event else { continue };
-                let (x, y) = match event {
-                    InputEvent::PowerButton if Instant::now() < ignore_power_until => continue,
-                    InputEvent::PowerButton if last_power_press.elapsed() < Duration::from_secs(2) => continue,
-                    InputEvent::PowerButton => {
-                        last_power_press = Instant::now();
-                        if sleep_backend_enabled && sleep_hw_supported && !power::is_plugged() {
-                            tracing::info!("Power button pressed: going to sleep");
-                            sleep_requested = true;
-                            continue;
-                        }
-                        if let Some(l) = light.as_mut() {
-                            let on = !l.is_on();
-                            tracing::info!("Power button pressed: light {}", if on { "on" } else { "off" });
-                            l.set_on(on);
-                            light_dimmed = !on;
-                            renderer.frontlight = Some(on);
-                            last_activity = Instant::now();
-                            renderer.render(&mut canvas, &config, 0, &current_states, true);
-                            flush(&mut fb, &canvas, false);
-                        }
-                        continue;
-                    }
+                match event {
                     InputEvent::Plugged => {
                         tracing::info!("USB cable plugged in: returning to Nickel");
                         break;
@@ -499,58 +538,26 @@ async fn run_device(
                     InputEvent::PowerSourceChanged => {
                         renderer.render(&mut canvas, &config, 0, &current_states, true);
                         flush(&mut fb, &canvas, false);
-                        continue;
                     }
-                    InputEvent::Tap { x, y } => (x, y),
-                };
-                if last_tap.elapsed() < TAP_DEBOUNCE {
-                    continue;
-                }
-                last_tap = Instant::now();
-                last_activity = Instant::now();
-                tracing::debug!("Tap at ({:.0}, {:.0})", x, y);
-
-                if light_dimmed {
-                    light_dimmed = false;
-                    if let Some(l) = light.as_mut() {
-                        l.set_on(true);
-                        renderer.frontlight = Some(true);
-                        renderer.render(&mut canvas, &config, 0, &current_states, true);
-                        flush(&mut fb, &canvas, false);
-                        continue;
-                    }
-                }
-
-                let Some(action) = renderer.handle_touch(x, y) else { continue };
-                match action {
-                    UiAction::ExitToReader => {
-                        tracing::info!("Exit tapped");
-                        break;
-                    }
-                    UiAction::Refresh => {
-                        let (new_states, new_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
-                        current_states = new_states;
-                        if let Some(s) = &new_sleep {
-                            apply_backend_sleep(s);
+                    InputEvent::Tap { x, y } => {
+                        if last_tap.elapsed() < TAP_DEBOUNCE {
+                            continue;
                         }
-                        renderer.render(&mut canvas, &config, 0, &current_states, true);
-                        flush(&mut fb, &canvas, true);
-                    }
-                    UiAction::ToggleFrontlight => {
-                        if let Some(l) = light.as_mut() {
-                            l.set_on(!l.is_on());
-                            renderer.frontlight = Some(l.is_on());
-                            renderer.render(&mut canvas, &config, 0, &current_states, true);
-                            flush(&mut fb, &canvas, false);
+                        last_tap = Instant::now();
+                        if matches!(renderer.handle_touch(x, y), Some(UiAction::ExitToReader)) {
+                            tracing::info!("Exit tapped");
+                            break;
                         }
                     }
-                    _ => {}
+                    InputEvent::PowerButton => {}
                 }
             }
 
             _ = wake_rx.recv() => {
+                wifi_restoring = false;
                 let (new_states, new_sleep) = fetch_and_update(&backend, &mut config, &mut renderer).await;
                 current_states = new_states;
+                last_fetch = Instant::now();
                 if let Some(s) = &new_sleep {
                     apply_backend_sleep(s);
                 }
@@ -579,11 +586,17 @@ async fn run_device(
     std::process::exit(0);
 }
 
-fn wants_awake(event: &InputEvent, last_power_press: Instant, ignore_power_until: Instant) -> bool {
+fn is_exit_event(event: &InputEvent, renderer: &ScreenRenderer, last_tap: &mut Instant) -> bool {
     match event {
-        InputEvent::PowerButton => last_power_press.elapsed() >= Duration::from_secs(2) && Instant::now() >= ignore_power_until,
-        InputEvent::Tap { .. } | InputEvent::Plugged => true,
-        InputEvent::PowerSourceChanged => false,
+        InputEvent::Plugged => true,
+        InputEvent::Tap { x, y } => {
+            if last_tap.elapsed() < TAP_DEBOUNCE {
+                return false;
+            }
+            *last_tap = Instant::now();
+            matches!(renderer.handle_touch(*x, *y), Some(UiAction::ExitToReader))
+        }
+        InputEvent::PowerButton | InputEvent::PowerSourceChanged => false,
     }
 }
 

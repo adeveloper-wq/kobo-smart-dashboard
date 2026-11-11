@@ -671,11 +671,58 @@
       });
     }
 
+    function normalizeSleepMode(sm) {
+      const enabled = sm?.enabled !== false;
+      const sleepUntilNext = enabled && Boolean(sm?.sleep_until_next_period);
+      if (!enabled) {
+        return { enabled: false, sleep_until_next_period: false };
+      }
+      if (sleepUntilNext) {
+        return { enabled: true, sleep_until_next_period: true };
+      }
+      const rawWifi = parseInt(sm?.wifi_update_interval_seconds ?? sm?.update_interval_seconds, 10);
+      const wifiInterval = Number.isFinite(rawWifi) ? Math.min(43200, Math.max(120, rawWifi)) : 1800;
+      const rawDisplay = parseInt(sm?.display_update_interval_seconds, 10);
+      const displayInterval = (Number.isFinite(rawDisplay) && rawDisplay >= 60 && rawDisplay < wifiInterval) ? rawDisplay : null;
+      const out = {
+        enabled: true,
+        wifi_update_interval_seconds: wifiInterval,
+        sleep_until_next_period: false
+      };
+      if (displayInterval !== null) {
+        out.display_update_interval_seconds = displayInterval;
+      }
+      return out;
+    }
+
     function renderSchedulesList(schedules) {
       const container = document.getElementById('schedulesContainer');
       container.innerHTML = '';
 
       schedules.forEach((s, idx) => {
+        s.sleep_mode = normalizeSleepMode(s.sleep_mode);
+        const sleepEnabled = s.sleep_mode.enabled;
+        const sleepUntilNext = s.sleep_mode.sleep_until_next_period;
+        const intervalsDisabled = !sleepEnabled || sleepUntilNext;
+        const wifiPlaceholder = !sleepEnabled ? 'N/A (Sleep disabled)' : 'N/A (Until end time)';
+        const wifiValue = intervalsDisabled ? '' : s.sleep_mode.wifi_update_interval_seconds;
+        const displayValue = intervalsDisabled ? null : (s.sleep_mode.display_update_interval_seconds ?? null);
+        const displayPresets = [60, 120, 300, 600, 900, 1800];
+        if (displayValue !== null && !displayPresets.includes(displayValue)) {
+          displayPresets.push(displayValue);
+          displayPresets.sort((a, b) => a - b);
+        }
+        const displayOptionsHtml = intervalsDisabled
+          ? `<option value="" selected>${!sleepEnabled ? 'N/A (Sleep disabled)' : 'N/A (Until end time)'}</option>`
+          : `<option value="" ${displayValue === null ? 'selected' : ''}>Off (Only on Wi-Fi fetch)</option>` +
+            displayPresets
+              .filter(sec => sec < s.sleep_mode.wifi_update_interval_seconds)
+              .map(sec => {
+                const label = sec === 60 ? '60s (1 min)' : `${sec}s (${sec / 60} min)`;
+                return `<option value="${sec}" ${displayValue === sec ? 'selected' : ''}>${label}</option>`;
+              })
+              .join('');
+
         const div = document.createElement('div');
         div.className = 'schedule-item';
         const greetingsText = (s.greetings || [s.greeting?.title || "Guten Tag!"]).join('\n');
@@ -714,12 +761,28 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Wake Interval (Seconds)</label>
-              <input type="number" step="60" value="${s.sleep_mode?.update_interval_seconds || 1800}" onchange="updateScheduleSleep(${idx}, 'update_interval_seconds', parseInt(this.value))">
+              <label>Sleep Mode</label>
+              <select onchange="updateScheduleSleep(${idx}, 'enabled', this.value === 'true')">
+                <option value="true" ${sleepEnabled ? 'selected' : ''}>Enabled (Config)</option>
+                <option value="false" ${!sleepEnabled ? 'selected' : ''}>Disabled</option>
+              </select>
             </div>
             <div class="form-group">
-              <label>Idle Sleep Timeout (Seconds)</label>
-              <input type="number" step="5" value="${s.sleep_mode?.sleep_after_secs || 30}" onchange="updateScheduleSleep(${idx}, 'sleep_after_secs', parseInt(this.value))">
+              <label>Sleep Until Next Period</label>
+              <select ${!sleepEnabled ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''} onchange="updateScheduleSleep(${idx}, 'sleep_until_next_period', this.value === 'true')">
+                <option value="false" ${!sleepUntilNext ? 'selected' : ''}>No (Use Intervals)</option>
+                <option value="true" ${sleepUntilNext ? 'selected' : ''}>Yes (Sleep Until End Time)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>1. Display Clock Interval (Wi-Fi Off)</label>
+              <select ${intervalsDisabled ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''} onchange="updateScheduleSleep(${idx}, 'display_update_interval_seconds', this.value ? parseInt(this.value, 10) : null)">
+                ${displayOptionsHtml}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>2. Wi-Fi Data Fetch Interval (Seconds)</label>
+              <input type="number" min="120" max="43200" step="60" value="${wifiValue}" placeholder="${wifiPlaceholder}" ${intervalsDisabled ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''} onchange="updateScheduleSleep(${idx}, 'wifi_update_interval_seconds', parseInt(this.value, 10))">
             </div>
           </div>
         `;
@@ -737,8 +800,9 @@
       refreshPreview();
     }
     function updateScheduleSleep(idx, key, val) {
-      if (!currentConfig.schedules[idx].sleep_mode) currentConfig.schedules[idx].sleep_mode = {};
-      currentConfig.schedules[idx].sleep_mode[key] = val;
+      const sm = { ...(currentConfig.schedules[idx].sleep_mode || {}), [key]: val };
+      currentConfig.schedules[idx].sleep_mode = normalizeSleepMode(sm);
+      renderSchedulesList(currentConfig.schedules);
       refreshPreview();
     }
     function removeSchedule(idx) {
@@ -757,7 +821,7 @@
           "Schöne Pause!",
           "Hallo zusammen!"
         ],
-        sleep_mode: { enabled: true, update_interval_seconds: 1800, sleep_after_secs: 30 }
+        sleep_mode: { enabled: true, display_update_interval_seconds: 60, wifi_update_interval_seconds: 1800, sleep_until_next_period: false }
       });
       renderSchedulesList(currentConfig.schedules);
       refreshPreview();
@@ -926,8 +990,12 @@
       renderEventList('ksEventsList2', cal2.events || []);
 
       // Sleep Bar
-      if (data.sleep) {
+      const sleepBar = document.getElementById('ksSleepBar');
+      if (data.sleep && data.sleep.enabled) {
+        sleepBar.style.display = 'flex';
         document.getElementById('ksSleepNote').textContent = data.sleep.sleep_note || 'Ruhemodus aktiv';
+      } else {
+        sleepBar.style.display = 'none';
       }
 
       applyCardRadius(data.theme?.card_corner_radius);

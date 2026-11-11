@@ -70,7 +70,6 @@ pub fn render_weather_card(
 
     if rect.h < 190.0 {
         render_weather_compact(canvas, theme, rect, state, forecast_days);
-        targets.push(InteractiveTarget { rect, action: UiAction::Refresh });
         return;
     }
 
@@ -210,9 +209,5 @@ pub fn render_weather_card(
         }
     }
 
-    // Tapping weather card triggers refresh
-    targets.push(InteractiveTarget {
-        rect,
-        action: UiAction::Refresh,
-    });
+    let _ = targets;
 }
