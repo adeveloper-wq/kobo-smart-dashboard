@@ -187,6 +187,7 @@ pub struct ScreenRenderer {
     pub last_update: Option<DateTime<Utc>>,
     pub frontlight: Option<bool>,
     pub sleep_until: Option<String>,
+    pub show_clock: bool,
     scale: f32,
 }
 
@@ -199,6 +200,7 @@ impl ScreenRenderer {
             last_update: None,
             frontlight: None,
             sleep_until: None,
+            show_clock: true,
             scale: 1.0,
         }
     }
@@ -226,6 +228,7 @@ impl ScreenRenderer {
             charging,
             wifi_up,
             frontlight: self.frontlight,
+            show_clock: self.show_clock,
         };
 
         let header_bottom = render_header(

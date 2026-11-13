@@ -345,6 +345,7 @@ async fn run_device(
                     l.set_on(false);
                 }
                 loop {
+                    renderer.show_clock = display_wake == Some(60);
                     let next_local = ui::widgets::header::to_local(next_wifi_at, &config.theme);
                     let next_time_str = ui::widgets::header::format_time(&next_local, &config.theme);
                     let sleep_note_text = format!("{} {}", i18n::t("sleep.next"), next_time_str);
@@ -492,6 +493,7 @@ async fn run_device(
                     }
                 }
                 renderer.sleep_until = None;
+                renderer.show_clock = true;
                 if should_exit {
                     if wifi_down {
                         let script = wifi_script.clone();

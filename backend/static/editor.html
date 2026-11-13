@@ -1123,13 +1123,16 @@
         humRow.innerHTML = '';
       }
 
-      // Sleep Bar
+      // Sleep Bar & Clock visibility
       const sleepBar = document.getElementById('ksSleepBar');
+      const clockEl = document.getElementById('ksClock');
       if (data.sleep && data.sleep.enabled) {
         sleepBar.style.display = 'flex';
         document.getElementById('ksSleepNote').textContent = data.sleep.sleep_note || 'Ruhemodus aktiv';
+        clockEl.style.display = (data.sleep.display_update_interval_secs === 60) ? 'block' : 'none';
       } else {
         sleepBar.style.display = 'none';
+        clockEl.style.display = 'block';
       }
 
       applyCardRadius(data.theme?.card_corner_radius);

@@ -7,7 +7,7 @@ use chrono::{DateTime, Datelike, FixedOffset, Local, Timelike, Utc};
 
 pub const SIDE_PAD: f32 = 32.0;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct HeaderStatus {
     pub is_live: bool,
     pub is_demo: bool,
@@ -17,6 +17,22 @@ pub struct HeaderStatus {
     pub wifi_up: Option<bool>,
     /// Frontlight state, when the device has one we can control
     pub frontlight: Option<bool>,
+    pub show_clock: bool,
+}
+
+impl Default for HeaderStatus {
+    fn default() -> Self {
+        Self {
+            is_live: false,
+            is_demo: false,
+            last_update: None,
+            battery: None,
+            charging: false,
+            wifi_up: None,
+            frontlight: None,
+            show_clock: true,
+        }
+    }
 }
 
 /// Current time in the configured timezone.
@@ -153,7 +169,8 @@ fn choose_fit(canvas: &Canvas, w: f32, n_buttons: f32, t: &HeaderTexts) -> (Head
     for fit in HEADER_FITS {
         let leftmost = w - SIDE_PAD - n_buttons * fit.btn - (n_buttons - 1.0) * fit.gap;
         let right = leftmost - fit.pad;
-        let dx = SIDE_PAD + canvas.measure_text(t.time, fit.time_size, true).0 + fit.pad;
+        let time_offset = if t.time.is_empty() { 0.0 } else { canvas.measure_text(t.time, fit.time_size, true).0 + fit.pad };
+        let dx = SIDE_PAD + time_offset;
         let mut row1 = if t.wifi { 48.0 } else { 0.0 };
         if let Some(label) = t.battery {
             row1 += 46.0 + if fit.show_pct { canvas.measure_text(label, 24.0, true).0 + 10.0 } else { 0.0 };
@@ -179,7 +196,7 @@ pub fn render_header(
     targets: &mut Vec<InteractiveTarget>,
 ) -> f32 {
     let now = now_local(theme_cfg);
-    let time_str = format_time(&now, theme_cfg);
+    let time_str = if status.show_clock { format_time(&now, theme_cfg) } else { String::new() };
     let weekday = i18n::nth("date.weekdays", now.weekday().num_days_from_monday() as usize);
     let date = i18n::tf(
         "date.long",
@@ -216,9 +233,13 @@ pub fn render_header(
     let (HeaderFit { btn, gap: _, time_size, pad, show_pct, full_text }, _) = choose_fit(canvas, w, n_buttons, &texts);
 
     // Clock + date
-    canvas.draw_text(&time_str, SIDE_PAD, top - 4.0 + (row_h - time_size) / 2.0, time_size, true, theme.text, TextAlign::Left);
-    let time_w = canvas.measure_text(&time_str, time_size, true).0;
-    let dx = SIDE_PAD + time_w + pad;
+    let dx = if status.show_clock {
+        canvas.draw_text(&time_str, SIDE_PAD, top - 4.0 + (row_h - time_size) / 2.0, time_size, true, theme.text, TextAlign::Left);
+        let time_w = canvas.measure_text(&time_str, time_size, true).0;
+        SIDE_PAD + time_w + pad
+    } else {
+        SIDE_PAD
+    };
 
     // Exit button only (dashboard is non-interactive aside from leaving)
     let by = top + (row_h - btn) / 2.0;
