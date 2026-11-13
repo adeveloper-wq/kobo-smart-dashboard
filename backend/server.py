@@ -20,6 +20,7 @@ import time
 import re
 import random
 import urllib.parse
+import urllib.request
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from typing import Any, Dict, List, Optional
@@ -48,6 +49,7 @@ STATIC_DIR = BACKEND_DIR / "static"
 # In-memory caches with timestamps
 _weather_cache = {"data": None, "timestamp": 0.0}
 _calendar_cache = {}  # {cal_id: {"data": None, "timestamp": 0.0}}
+_ha_cache = {"data": None, "timestamp": 0.0}
 ENABLE_BUILDER = True
 
 
@@ -171,10 +173,11 @@ def validate_config(config: dict) -> Optional[str]:
         if not enabled:
             if sleep_until_next:
                 return f"Schedule '{label}': 'sleep_until_next_period' cannot be true when sleep mode is disabled"
-            if has_wifi:
-                return f"Schedule '{label}': Wi-Fi update interval cannot be set when sleep mode is disabled"
             if has_display:
                 return f"Schedule '{label}': Display update interval cannot be set when sleep mode is disabled"
+            effective_wifi = wifi_interval if wifi_interval is not None else (1800 if legacy_interval is None else legacy_interval)
+            if isinstance(effective_wifi, bool) or not isinstance(effective_wifi, (int, float)) or effective_wifi < 60 or effective_wifi > 43200:
+                return f"Schedule '{label}': Wi-Fi update interval must be between 60 and 43200 seconds when sleep mode is disabled"
         elif sleep_until_next:
             if has_wifi:
                 return f"Schedule '{label}': Wi-Fi update interval cannot be set when 'sleep_until_next_period' is enabled"
@@ -215,10 +218,11 @@ def calculate_next_update(config: dict, schedule: dict, now: datetime, next_even
 
     end_time_str = schedule.get("end_time", "23:59")
     period_end = get_next_occurrence(end_time_str, now)
-    seconds_to_period_end = max(120, int((period_end - now).total_seconds()))
+    min_wake = 60 if not enabled else 120
+    seconds_to_period_end = max(min_wake, int((period_end - now).total_seconds()))
 
     if not enabled:
-        wake_seconds = min(1800, seconds_to_period_end)
+        wake_seconds = min(default_interval, seconds_to_period_end)
     elif sleep_until_next:
         # Deep sleep until the next schedule begins
         wake_seconds = seconds_to_period_end
@@ -233,8 +237,9 @@ def calculate_next_update(config: dict, schedule: dict, now: datetime, next_even
             if 120 <= secs_to_event < wake_seconds:
                 wake_seconds = secs_to_event
 
-    # Clamp to reasonable limits (at least 2 minutes, at most 12 hours)
-    wake_seconds = max(120, min(wake_seconds, 43200))
+    # Clamp to reasonable limits (at least 60s when awake or 2 minutes when sleeping, at most 12 hours)
+    min_wake = 60 if not enabled else 120
+    wake_seconds = max(min_wake, min(wake_seconds, 43200))
     if display_interval is not None and (display_interval < 60 or display_interval >= wake_seconds):
         display_interval = None
 
@@ -307,8 +312,57 @@ def get_configured_calendars(config: dict) -> list[dict]:
     ]
 
 
-def get_person_calendar_events(cal_cfg: dict, now: datetime) -> tuple[list, Optional[datetime]]:
-    """Fetch, parse, and filter events for a specific person's calendar, always returning next 7 events."""
+def get_ha_humidity_sensors(config: dict) -> list[dict]:
+    """Fetch configured humidity sensors from Home Assistant REST API with caching."""
+    global _ha_cache
+    ha_cfg = config.get("home_assistant", {})
+    sensors_cfg = ha_cfg.get("humidity_sensors", [])
+    if not sensors_cfg:
+        return []
+
+    if not ha_cfg.get("enabled", False):
+        return [
+            {"name": s.get("name", s.get("entity_id", "Sensor")), "value": "--", "unit": "%"}
+            for s in sensors_cfg[:5]
+        ]
+
+    ttl = ha_cfg.get("cache_ttl_seconds", 30)
+    now_ts = time.time()
+    if _ha_cache["data"] is not None and (now_ts - _ha_cache["timestamp"] < ttl):
+        return _ha_cache["data"]
+
+    base_url = ha_cfg.get("url", "").rstrip("/")
+    token = ha_cfg.get("token", "")
+    results = []
+    for s in sensors_cfg[:5]:
+        name = s.get("name", s.get("entity_id", "Sensor"))
+        entity_id = s.get("entity_id", "")
+        val_str = "--"
+        unit = "%"
+        if base_url and token and entity_id:
+            try:
+                req = urllib.request.Request(
+                    f"{base_url}/api/states/{urllib.parse.quote(entity_id, safe='')}",
+                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+                    raw_state = payload.get("state", "--")
+                    try:
+                        val_str = str(round(float(raw_state)))
+                    except (ValueError, TypeError):
+                        val_str = str(raw_state) if raw_state not in ("unavailable", "unknown") else "--"
+                    unit = payload.get("attributes", {}).get("unit_of_measurement", "%")
+            except Exception as e:
+                sys.stderr.write(f"Home Assistant fetch failed for {entity_id}: {e}\n")
+        results.append({"name": name, "value": val_str, "unit": unit})
+
+    _ha_cache = {"data": results, "timestamp": now_ts}
+    return results
+
+
+def get_person_calendar_events(cal_cfg: dict, now: datetime, max_events: int = 7) -> tuple[list, Optional[datetime]]:
+    """Fetch, parse, and filter events for a specific person's calendar."""
     global _calendar_cache
     if not cal_cfg.get("enabled", True):
         return [], None
@@ -357,8 +411,7 @@ def get_person_calendar_events(cal_cfg: dict, now: datetime) -> tuple[list, Opti
 
         _calendar_cache[cal_id] = {"data": raw_events, "timestamp": now_ts}
 
-    # Always return next 7 events
-    formatted = calendar_parser.filter_and_format_events(raw_events, scope="all_upcoming", reference_dt=now, max_events=7)
+    formatted = calendar_parser.filter_and_format_events(raw_events, scope="all_upcoming", reference_dt=now, max_events=max_events)
 
     # Find earliest upcoming event start
     next_event_dt = None
@@ -391,14 +444,15 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
     # 1. Weather Data (Current + Forecast)
     weather_data = get_weather_data(config)
 
-    # 2. Calendars for both persons (next 4 events each)
+    # 2. Calendars for both persons
+    cal_max_events = int(schedule.get("calendar_max_events", 7))
     cal_configs = get_configured_calendars(config)
     calendars_payload = []
     earliest_event_dt = None
 
     for cal_cfg in cal_configs[:2]:  # support two persons
         person_name = cal_cfg.get("name", "Person")
-        events, next_dt = get_person_calendar_events(cal_cfg, now)
+        events, next_dt = get_person_calendar_events(cal_cfg, now, max_events=cal_max_events)
         calendars_payload.append({
             "id": cal_cfg.get("id", person_name.lower().replace(" ", "_")),
             "person": person_name,
@@ -481,6 +535,14 @@ def build_dashboard_payload(config: dict, schedule_id_override: str = None) -> d
             "events": person2_cal["events"]
         }
     ]
+
+    if schedule.get("show_humidity_row", False):
+        ha_sensors = get_ha_humidity_sensors(config)
+        if ha_sensors:
+            resolved_cards.append({
+                "type": "humidity_row",
+                "sensors": ha_sensors
+            })
 
     theme_cfg = config.get("theme", {})
 

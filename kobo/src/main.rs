@@ -275,7 +275,8 @@ async fn run_device(
         display_wake: &mut Option<u64>,
     ) {
         *sleep_backend_enabled = s.enabled;
-        let wifi_secs = s.sleep_wake_secs.max(120) as u64;
+        let min_secs = if s.enabled { 120 } else { 60 };
+        let wifi_secs = (s.sleep_wake_secs as u64).max(min_secs);
         *sleep_wake = Duration::from_secs(wifi_secs);
         *display_wake = s.display_update_interval_secs
             .map(|d| d as u64)
@@ -530,7 +531,7 @@ async fn run_device(
                     apply_backend_sleep(s, &mut sleep_backend_enabled, &mut sleep_wake, &mut display_wake);
                 }
                 renderer.render(&mut canvas, &config, 0, &current_states, true);
-                flush(&mut fb, &canvas, config.device.full_refresh_cycles, true);
+                flush(&mut fb, &canvas, config.device.full_refresh_cycles, false);
             }
 
             event = touch_driver.recv() => {

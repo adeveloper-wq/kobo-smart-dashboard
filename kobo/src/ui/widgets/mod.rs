@@ -7,7 +7,7 @@ pub mod weather_card;
 pub use calendar_card::render_calendar_card;
 pub use greeting_card::render_greeting_card;
 pub use header::render_header;
-pub use humidity_card::render_humidity_card;
+pub use humidity_card::{render_humidity_card, render_humidity_row};
 pub use weather_card::render_weather_card;
 
 use crate::display::{Canvas, TextAlign};

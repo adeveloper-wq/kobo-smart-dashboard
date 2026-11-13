@@ -34,32 +34,23 @@ pub fn render_calendar_card(
         return;
     }
 
-    let time_col_w = if rect.w >= 600.0 { 210.0 } else { 160.0 };
-    let row_h = 60.0;
+    let time_col_w = if rect.w >= 600.0 { 160.0 } else { 140.0 };
+    let avail_h = (rect.y + rect.h - 10.0 - y0).max(0.0);
+    let target_rows = events.len().min(7) as f32;
+    let row_h = (avail_h / target_rows).clamp(40.0, 60.0);
+    let text_scale = (row_h / 60.0).clamp(0.78, 1.0);
+    let label_size = type_scale::LABEL * text_scale;
+    let body_size = type_scale::BODY * text_scale;
+    let text_y_off = ((row_h - body_size) * 0.35).max(2.0);
 
     for ev in events {
-        if y0 + row_h > rect.y + rect.h - 10.0 {
+        if y0 + row_h > rect.y + rect.h - 10.0 + 0.5 {
             break;
         }
 
-        // Event Time and Date Badge
-        let time_badge = match &ev.date_label {
-            Some(label) if !label.is_empty() => {
-                if ev.is_all_day {
-                    format!("{} · Ganztägig", label)
-                } else {
-                    format!("{} {}", label, ev.time)
-                }
-            }
-            _ => {
-                if ev.is_all_day {
-                    "Ganztägig".to_string()
-                } else {
-                    ev.time.clone()
-                }
-            }
-        };
-        canvas.draw_text_fit(&time_badge, x0, y0 + 6.0, type_scale::LABEL, true, theme.accent.solid, TextAlign::Left, time_col_w - 12.0);
+        // Event date badge (day/month or Heute/Morgen)
+        let date_badge = ev.date_label.as_deref().unwrap_or("");
+        canvas.draw_text_fit(date_badge, x0, y0 + text_y_off, label_size, true, theme.accent.solid, TextAlign::Left, time_col_w - 12.0);
 
         // Title and Location
         let title_x = x0 + time_col_w;
@@ -75,7 +66,7 @@ pub fn render_calendar_card(
             ev.title.clone()
         };
 
-        canvas.draw_text_fit(&display_title, title_x, y0 + 6.0, type_scale::BODY, true, theme.text, TextAlign::Left, title_max_w);
+        canvas.draw_text_fit(&display_title, title_x, y0 + text_y_off, body_size, true, theme.text, TextAlign::Left, title_max_w);
 
         y0 += row_h;
     }

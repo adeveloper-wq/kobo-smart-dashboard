@@ -183,10 +183,14 @@ class TestServerLogic(unittest.TestCase):
         self.assertTrue(update["enabled"])
         self.assertIsNotNone(update["sleep_note"])
 
-        # Disabled sleep mode hides sleep note and clears display_update_interval_secs
-        disabled_sched = {"end_time": "12:00", "sleep_mode": {"enabled": False, "sleep_until_next_period": True}}
+        # Disabled sleep mode hides sleep note, clears display_update_interval_secs, and respects wifi_update_interval_seconds
+        disabled_sched = {
+            "end_time": "12:00",
+            "sleep_mode": {"enabled": False, "sleep_until_next_period": True, "wifi_update_interval_seconds": 300},
+        }
         disabled_update = server.calculate_next_update(self.config, disabled_sched, now)
         self.assertFalse(disabled_update["enabled"])
+        self.assertEqual(disabled_update["sleep_wake_secs"], 300)
         self.assertIsNone(disabled_update["display_update_interval_secs"])
         self.assertIsNone(disabled_update["sleep_note"])
 
@@ -205,10 +209,37 @@ class TestServerLogic(unittest.TestCase):
         }
         self.assertIsNotNone(server.validate_config(bad_disabled_until))
 
-        bad_disabled_interval = {
-            "schedules": [{"id": "m", "sleep_mode": {"enabled": False, "wifi_update_interval_seconds": 1800}}]
+        ok_disabled_interval = {
+            "schedules": [{"id": "m", "sleep_mode": {"enabled": False, "wifi_update_interval_seconds": 60}}]
         }
-        self.assertIsNotNone(server.validate_config(bad_disabled_interval))
+        self.assertIsNone(server.validate_config(ok_disabled_interval))
+
+        bad_disabled_short_interval = {
+            "schedules": [{"id": "m", "sleep_mode": {"enabled": False, "wifi_update_interval_seconds": 30}}]
+        }
+        self.assertIsNotNone(server.validate_config(bad_disabled_short_interval))
+
+    def test_humidity_row_and_calendar_max_events_per_schedule(self):
+        cfg = json.loads(json.dumps(self.config))
+        cfg["home_assistant"] = {
+            "enabled": False,
+            "humidity_sensors": [
+                {"name": "Study", "entity_id": "sensor.study_humidity"},
+                {"name": "Bathroom", "entity_id": "sensor.bathroom_humidity"},
+                {"name": "Living Room", "entity_id": "sensor.living_room_humidity"},
+                {"name": "Kitchen", "entity_id": "sensor.kitchen_humidity"},
+                {"name": "Bedroom", "entity_id": "sensor.bedroom_humidity"},
+            ],
+        }
+        cfg["schedules"][0]["calendar_max_events"] = 3
+        cfg["schedules"][0]["show_humidity_row"] = True
+        payload = server.build_dashboard_payload(cfg, schedule_id_override=cfg["schedules"][0]["id"])
+        cal_cards = [c for c in payload["cards"] if c["type"] == "calendar"]
+        hum_cards = [c for c in payload["cards"] if c["type"] == "humidity_row"]
+        self.assertEqual(len(hum_cards), 1)
+        self.assertEqual(len(hum_cards[0]["sensors"]), 5)
+        for c in cal_cards:
+            self.assertLessEqual(len(c["events"]), 3)
 
         bad_disabled_display = {
             "schedules": [{"id": "m", "sleep_mode": {"enabled": False, "display_update_interval_seconds": 60}}]

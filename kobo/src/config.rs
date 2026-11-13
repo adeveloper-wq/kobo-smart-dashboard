@@ -249,6 +249,20 @@ pub enum CardConfig {
         #[serde(default)]
         status: String,
     },
+    #[serde(rename = "humidity_row")]
+    HumidityRow {
+        #[serde(default)]
+        sensors: Vec<HumiditySensorItem>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HumiditySensorItem {
+    pub name: String,
+    #[serde(default = "default_humidity_val")]
+    pub value: String,
+    #[serde(default = "default_percent")]
+    pub unit: String,
 }
 
 fn default_weather_entity() -> String {

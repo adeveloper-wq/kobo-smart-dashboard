@@ -24,7 +24,7 @@ enum Span {
 
 fn span_of(card: &CardConfig) -> Span {
     match card {
-        CardConfig::Weather { .. } | CardConfig::Greeting { .. } | CardConfig::Calendar { .. } => Span::Full,
+        CardConfig::Weather { .. } | CardConfig::Greeting { .. } | CardConfig::Calendar { .. } | CardConfig::HumidityRow { .. } => Span::Full,
         CardConfig::Humidity { .. } => Span::Half,
     }
 }
@@ -46,6 +46,7 @@ fn heights(card: &CardConfig, w: f32) -> (f32, f32) {
             (nat, (nat - 30.0).max(120.0))
         }
         CardConfig::Humidity { .. } => (176.0, 140.0),
+        CardConfig::HumidityRow { .. } => (136.0, 110.0),
     }
 }
 
@@ -112,17 +113,21 @@ fn zones_for<'a>(cards: &'a [CardConfig], cw: f32, ch: f32, top: f32) -> Vec<(&'
     let content_w = cw - 2.0 * SIDE_PAD;
     let half_w = (content_w - GAP) / 2.0;
 
-    // Separate into top cards (greeting, weather, humidity) and calendar cards (for both persons)
-    let (cals, non_cals): (Vec<&CardConfig>, Vec<&CardConfig>) =
+    // Separate into top cards (greeting, weather, humidity), calendar cards (for both persons), and optional humidity_row
+    let (cals, rest): (Vec<&CardConfig>, Vec<&CardConfig>) =
         cards.iter().partition(|c| matches!(c, CardConfig::Calendar { .. }));
+    let (humidity_rows, non_cals): (Vec<&CardConfig>, Vec<&CardConfig>) =
+        rest.into_iter().partition(|c| matches!(c, CardConfig::HumidityRow { .. }));
 
     // When we have 2 calendars and horizontal layout:
     // Display calendars for both persons side by side in separate columns!
     if cals.len() == 2 && !non_cals.is_empty() {
+        let has_hum_row = !humidity_rows.is_empty();
         let usable_h = (avail_h - GAP).max(100.0);
-        // Compact top row (greeting + weather); calendars get the remaining height
-        let top_h = (usable_h * 0.2).clamp(150.0, 170.0);
-        let cal_h = usable_h - top_h;
+        // Compact top row (greeting + weather); calendars get the remaining height (minus optional humidity row)
+        let top_h = (usable_h * 0.2).clamp(145.0, 170.0);
+        let hum_h = if has_hum_row { 130.0 } else { 0.0 };
+        let cal_h = (usable_h - top_h - if has_hum_row { hum_h + GAP } else { 0.0 }).max(120.0);
         let cal_y = top + top_h + GAP;
 
         let mut out = Vec::new();
@@ -139,9 +144,15 @@ fn zones_for<'a>(cards: &'a [CardConfig], cw: f32, ch: f32, top: f32) -> Vec<(&'
             }
         }
 
-        // Bottom Row: Both calendars side by side in separate columns!
+        // Middle/Bottom Row: Both calendars side by side in separate columns!
         out.push((cals[0], Rect::new(SIDE_PAD, cal_y, half_w, cal_h)));
         out.push((cals[1], Rect::new(SIDE_PAD + half_w + GAP, cal_y, half_w, cal_h)));
+
+        // Optional 3rd Row: 5-sensor humidity strip
+        if let Some(hum_card) = humidity_rows.first() {
+            let hum_y = cal_y + cal_h + GAP;
+            out.push((*hum_card, Rect::new(SIDE_PAD, hum_y, content_w, hum_h)));
+        }
 
         return out;
     }
@@ -285,6 +296,9 @@ impl ScreenRenderer {
             }
             CardConfig::Humidity { title, value, unit, status } => {
                 render_humidity_card(canvas, theme, rect, title.as_deref(), value, unit, status, targets);
+            }
+            CardConfig::HumidityRow { sensors } => {
+                render_humidity_row(canvas, theme, rect, sensors);
             }
         }
     }
