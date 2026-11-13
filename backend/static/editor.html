@@ -337,6 +337,25 @@
       align-items: center;
     }
 
+    .ks-humidity-row {
+      background: #ffffff;
+      border: 2.5px solid #000000;
+      border-radius: 18px;
+      padding: 12px 8px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      align-items: center;
+      text-align: center;
+    }
+    .ks-hum-cell {
+      padding: 4px 8px;
+      border-right: 1.5px solid #ccc;
+    }
+    .ks-hum-cell:last-child { border-right: none; }
+    .ks-hum-name { font-size: 13px; font-weight: 800; color: #444; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ks-hum-val { font-size: 26px; font-weight: 900; color: #000; line-height: 1.1; }
+    .ks-hum-unit { font-size: 14px; font-weight: 700; color: #555; margin-left: 2px; }
+
     .toast {
       position: fixed;
       bottom: 24px;
@@ -465,6 +484,39 @@
             <input type="text" id="serverTimezone" placeholder="Europe/Berlin" onchange="syncFormToConfig();">
           </div>
         </div>
+
+        <h3 style="margin-top: 24px; margin-bottom: 14px;">🏠 Home Assistant (Humidity Sensors)</h3>
+        <div class="schedule-item">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Home Assistant Integration</label>
+              <select id="haEnabled" onchange="syncFormToConfig(); refreshPreview();">
+                <option value="false">Disabled (Placeholder "--")</option>
+                <option value="true">Enabled</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Home Assistant URL</label>
+              <input type="text" id="haUrl" placeholder="http://homeassistant.local:8123" onchange="syncFormToConfig();">
+            </div>
+            <div class="form-group">
+              <label>Long-Lived Access Token</label>
+              <input type="password" id="haToken" placeholder="eyJ..." onchange="syncFormToConfig();">
+            </div>
+          </div>
+          <div class="form-row" style="grid-template-columns: 1fr 1.5fr; margin-top: 8px;">
+            <div class="form-group"><label>Room 1 Name</label><input type="text" id="haSensorName0" placeholder="Arbeitszimmer" onchange="syncFormToConfig(); refreshPreview();"></div>
+            <div class="form-group"><label>Room 1 Entity ID</label><input type="text" id="haSensorEntity0" placeholder="sensor.study_humidity" onchange="syncFormToConfig();"></div>
+            <div class="form-group"><label>Room 2 Name</label><input type="text" id="haSensorName1" placeholder="Badezimmer" onchange="syncFormToConfig(); refreshPreview();"></div>
+            <div class="form-group"><label>Room 2 Entity ID</label><input type="text" id="haSensorEntity1" placeholder="sensor.bathroom_humidity" onchange="syncFormToConfig();"></div>
+            <div class="form-group"><label>Room 3 Name</label><input type="text" id="haSensorName2" placeholder="Wohnzimmer" onchange="syncFormToConfig(); refreshPreview();"></div>
+            <div class="form-group"><label>Room 3 Entity ID</label><input type="text" id="haSensorEntity2" placeholder="sensor.living_room_humidity" onchange="syncFormToConfig();"></div>
+            <div class="form-group"><label>Room 4 Name</label><input type="text" id="haSensorName3" placeholder="Küche" onchange="syncFormToConfig(); refreshPreview();"></div>
+            <div class="form-group"><label>Room 4 Entity ID</label><input type="text" id="haSensorEntity3" placeholder="sensor.kitchen_humidity" onchange="syncFormToConfig();"></div>
+            <div class="form-group"><label>Room 5 Name</label><input type="text" id="haSensorName4" placeholder="Schlafzimmer" onchange="syncFormToConfig(); refreshPreview();"></div>
+            <div class="form-group"><label>Room 5 Entity ID</label><input type="text" id="haSensorEntity4" placeholder="sensor.bedroom_humidity" onchange="syncFormToConfig();"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Tab 3: Theme -->
@@ -586,6 +638,9 @@
             </div>
           </div>
 
+          <!-- Row 3: Optional 5-Sensor Humidity Row -->
+          <div class="ks-humidity-row" id="ksHumidityRow" style="display: none;"></div>
+
           <!-- Sleep Mode Bar -->
           <div class="ks-sleep-bar" id="ksSleepBar">
             <span class="ks-icon-inline">
@@ -660,13 +715,31 @@
       document.getElementById('themeTimeFmt').value = cfg.theme?.time_format || '24h';
       applyCardRadius(cfg.theme?.card_corner_radius || 18);
 
+      const ha = cfg.home_assistant || {};
+      document.getElementById('haEnabled').value = ha.enabled ? 'true' : 'false';
+      document.getElementById('haUrl').value = ha.url || '';
+      document.getElementById('haToken').value = ha.token || '';
+      const defaultRooms = [
+        { name: 'Arbeitszimmer', entity_id: 'sensor.study_humidity' },
+        { name: 'Badezimmer', entity_id: 'sensor.bathroom_humidity' },
+        { name: 'Wohnzimmer', entity_id: 'sensor.living_room_humidity' },
+        { name: 'Küche', entity_id: 'sensor.kitchen_humidity' },
+        { name: 'Schlafzimmer', entity_id: 'sensor.bedroom_humidity' },
+      ];
+      const haSensors = ha.humidity_sensors || defaultRooms;
+      for (let i = 0; i < 5; i++) {
+        const s = haSensors[i] || defaultRooms[i];
+        document.getElementById(`haSensorName${i}`).value = s.name || '';
+        document.getElementById(`haSensorEntity${i}`).value = s.entity_id || '';
+      }
+
       renderSchedulesList(cfg.schedules || []);
     }
 
     function applyCardRadius(radius) {
       const val = (radius !== undefined && radius !== '') ? radius : (currentConfig.theme?.card_corner_radius || 18);
       const r = parseFloat(val) + 'px';
-      document.querySelectorAll('.ks-greeting, .ks-weather, .ks-calendar-card').forEach(el => {
+      document.querySelectorAll('.ks-greeting, .ks-weather, .ks-calendar-card, .ks-humidity-row').forEach(el => {
         el.style.borderRadius = r;
       });
     }
@@ -675,7 +748,12 @@
       const enabled = sm?.enabled !== false;
       const sleepUntilNext = enabled && Boolean(sm?.sleep_until_next_period);
       if (!enabled) {
-        return { enabled: false, sleep_until_next_period: false };
+        const rawWifi = parseInt(sm?.wifi_update_interval_seconds ?? sm?.update_interval_seconds, 10);
+        const out = { enabled: false, sleep_until_next_period: false };
+        if (Number.isFinite(rawWifi)) {
+          out.wifi_update_interval_seconds = Math.min(43200, Math.max(60, rawWifi));
+        }
+        return out;
       }
       if (sleepUntilNext) {
         return { enabled: true, sleep_until_next_period: true };
@@ -703,16 +781,18 @@
         s.sleep_mode = normalizeSleepMode(s.sleep_mode);
         const sleepEnabled = s.sleep_mode.enabled;
         const sleepUntilNext = s.sleep_mode.sleep_until_next_period;
-        const intervalsDisabled = !sleepEnabled || sleepUntilNext;
-        const wifiPlaceholder = !sleepEnabled ? 'N/A (Sleep disabled)' : 'N/A (Until end time)';
-        const wifiValue = intervalsDisabled ? '' : s.sleep_mode.wifi_update_interval_seconds;
-        const displayValue = intervalsDisabled ? null : (s.sleep_mode.display_update_interval_seconds ?? null);
+        const displayDisabled = !sleepEnabled || sleepUntilNext;
+        const wifiDisabled = sleepUntilNext;
+        const wifiMin = sleepEnabled ? 120 : 60;
+        const wifiPlaceholder = sleepUntilNext ? 'N/A (Until end time)' : '1800 (30 min default)';
+        const wifiValue = wifiDisabled ? '' : (s.sleep_mode.wifi_update_interval_seconds ?? '');
+        const displayValue = displayDisabled ? null : (s.sleep_mode.display_update_interval_seconds ?? null);
         const displayPresets = [60, 120, 300, 600, 900, 1800];
         if (displayValue !== null && !displayPresets.includes(displayValue)) {
           displayPresets.push(displayValue);
           displayPresets.sort((a, b) => a - b);
         }
-        const displayOptionsHtml = intervalsDisabled
+        const displayOptionsHtml = displayDisabled
           ? `<option value="" selected>${!sleepEnabled ? 'N/A (Sleep disabled)' : 'N/A (Until end time)'}</option>`
           : `<option value="" ${displayValue === null ? 'selected' : ''}>Off (Only on Wi-Fi fetch)</option>` +
             displayPresets
@@ -722,6 +802,9 @@
                 return `<option value="${sec}" ${displayValue === sec ? 'selected' : ''}>${label}</option>`;
               })
               .join('');
+
+        const calMaxEvents = s.calendar_max_events ?? 7;
+        const showHumRow = Boolean(s.show_humidity_row);
 
         const div = document.createElement('div');
         div.className = 'schedule-item';
@@ -776,13 +859,26 @@
             </div>
             <div class="form-group">
               <label>1. Display Clock Interval (Wi-Fi Off)</label>
-              <select ${intervalsDisabled ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''} onchange="updateScheduleSleep(${idx}, 'display_update_interval_seconds', this.value ? parseInt(this.value, 10) : null)">
+              <select ${displayDisabled ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''} onchange="updateScheduleSleep(${idx}, 'display_update_interval_seconds', this.value ? parseInt(this.value, 10) : null)">
                 ${displayOptionsHtml}
               </select>
             </div>
             <div class="form-group">
               <label>2. Wi-Fi Data Fetch Interval (Seconds)</label>
-              <input type="number" min="120" max="43200" step="60" value="${wifiValue}" placeholder="${wifiPlaceholder}" ${intervalsDisabled ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''} onchange="updateScheduleSleep(${idx}, 'wifi_update_interval_seconds', parseInt(this.value, 10))">
+              <input type="number" min="${wifiMin}" max="43200" step="30" value="${wifiValue}" placeholder="${wifiPlaceholder}" ${wifiDisabled ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''} onchange="updateScheduleSleep(${idx}, 'wifi_update_interval_seconds', this.value ? parseInt(this.value, 10) : undefined)">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Calendar Max Events</label>
+              <input type="number" min="1" max="7" value="${calMaxEvents}" onchange="updateScheduleProp(${idx}, 'calendar_max_events', parseInt(this.value, 10) || 7)">
+            </div>
+            <div class="form-group">
+              <label>Show HA Humidity Row</label>
+              <select onchange="updateScheduleProp(${idx}, 'show_humidity_row', this.value === 'true')">
+                <option value="false" ${!showHumRow ? 'selected' : ''}>No (Standard Layout)</option>
+                <option value="true" ${showHumRow ? 'selected' : ''}>Yes (5 Sensors Below Calendars)</option>
+              </select>
             </div>
           </div>
         `;
@@ -870,6 +966,22 @@
       currentConfig.theme.card_corner_radius = parseFloat(document.getElementById('themeRadius').value) || 18.0;
       currentConfig.theme.time_format = document.getElementById('themeTimeFmt').value;
       currentConfig.theme.language = "de";
+
+      const existingHa = currentConfig.home_assistant || {};
+      const sensors = [];
+      for (let i = 0; i < 5; i++) {
+        sensors.push({
+          name: document.getElementById(`haSensorName${i}`).value.trim() || `Room ${i + 1}`,
+          entity_id: document.getElementById(`haSensorEntity${i}`).value.trim()
+        });
+      }
+      currentConfig.home_assistant = {
+        enabled: document.getElementById('haEnabled').value === 'true',
+        url: document.getElementById('haUrl').value.trim(),
+        token: document.getElementById('haToken').value.trim(),
+        cache_ttl_seconds: existingHa.cache_ttl_seconds || 30,
+        humidity_sensors: sensors
+      };
     }
 
     function updateScheduleSelect(schedules) {
@@ -989,6 +1101,22 @@
       renderEventList('ksEventsList1', cal1.events || []);
       renderEventList('ksEventsList2', cal2.events || []);
 
+      // Optional 5-sensor humidity row
+      const humRow = document.getElementById('ksHumidityRow');
+      const humCard = (data.cards || []).find(c => c.type === 'humidity_row');
+      if (humCard && Array.isArray(humCard.sensors) && humCard.sensors.length > 0) {
+        humRow.style.display = 'grid';
+        humRow.innerHTML = humCard.sensors.slice(0, 5).map(s => `
+          <div class="ks-hum-cell">
+            <div class="ks-hum-name">${s.name}</div>
+            <div class="ks-hum-val">${s.value}<span class="ks-hum-unit">${s.unit || '%'}</span></div>
+          </div>
+        `).join('');
+      } else {
+        humRow.style.display = 'none';
+        humRow.innerHTML = '';
+      }
+
       // Sleep Bar
       const sleepBar = document.getElementById('ksSleepBar');
       if (data.sleep && data.sleep.enabled) {
@@ -1008,7 +1136,7 @@
         container.innerHTML = '<div style="font-size: 15px; color: #666; font-weight: 600; padding: 24px 0; text-align: center;">Keine anstehenden Termine</div>';
         return;
       }
-      events.slice(0, 4).forEach(ev => {
+      events.slice(0, 7).forEach(ev => {
         const item = document.createElement('div');
         item.className = 'ks-event-item';
         const dateBadge = ev.date_label ? `<span class="ks-event-badge">${ev.date_label}</span>` : '';
