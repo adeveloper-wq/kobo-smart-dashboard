@@ -63,14 +63,18 @@ pub fn render_humidity_row(
         let name_y = rect.y + 18.0;
         canvas.draw_text_fit(&sensor.name, cx, name_y, name_size, true, theme.text_muted, TextAlign::Center, max_w);
 
+        let icon_s = 24.0;
+        let icon_gap = 6.0;
         let val_w = canvas.measure_text(&sensor.value, val_size, true).0;
         let unit_w = if sensor.unit.is_empty() { 0.0 } else { canvas.measure_text(&sensor.unit, unit_size, false).0 + 4.0 };
-        let total_w = (val_w + unit_w).min(max_w);
+        let total_w = (icon_s + icon_gap + val_w + unit_w).min(max_w);
         let start_x = cx - total_w / 2.0;
         let val_y = rect.y + 58.0;
-        let drawn_vw = canvas.draw_text_fit(&sensor.value, start_x, val_y, val_size, true, theme.text, TextAlign::Left, (max_w - unit_w).max(10.0));
+        canvas.draw_icon("droplet", start_x, val_y + (val_size - icon_s) * 0.45, icon_s, theme.cool.solid, 2.0);
+        let text_x = start_x + icon_s + icon_gap;
+        let drawn_vw = canvas.draw_text_fit(&sensor.value, text_x, val_y, val_size, true, theme.text, TextAlign::Left, (max_w - icon_s - icon_gap - unit_w).max(10.0));
         if !sensor.unit.is_empty() {
-            canvas.draw_text(&sensor.unit, start_x + drawn_vw + 4.0, val_y + val_size * 0.85 - unit_size * 0.85, unit_size, false, theme.text_muted, TextAlign::Left);
+            canvas.draw_text(&sensor.unit, text_x + drawn_vw + 4.0, val_y + val_size * 0.85 - unit_size * 0.85, unit_size, false, theme.text_muted, TextAlign::Left);
         }
     }
 }

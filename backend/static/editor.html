@@ -1109,7 +1109,10 @@
         humRow.innerHTML = humCard.sensors.slice(0, 5).map(s => `
           <div class="ks-hum-cell">
             <div class="ks-hum-name">${s.name}</div>
-            <div class="ks-hum-val">${s.value}<span class="ks-hum-unit">${s.unit || '%'}</span></div>
+            <div class="ks-hum-val" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+              <span>${s.value}<span class="ks-hum-unit">${s.unit || '%'}</span></span>
+            </div>
           </div>
         `).join('');
       } else {
