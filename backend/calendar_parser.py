@@ -101,7 +101,7 @@ def filter_and_format_events(
     events: List[Dict[str, Any]],
     scope: str = 'all_upcoming',
     reference_dt: Optional[datetime] = None,
-    max_events: int = 4
+    max_events: int = 7
 ) -> List[Dict[str, Any]]:
     """
     Filter events by scope ('all_upcoming', 'today', 'today_remaining', 'tomorrow', 'next_24h')

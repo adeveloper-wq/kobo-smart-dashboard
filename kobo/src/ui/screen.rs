@@ -41,7 +41,7 @@ fn heights(card: &CardConfig, w: f32) -> (f32, f32) {
         }
         CardConfig::Greeting { .. } => (140.0, 100.0),
         CardConfig::Calendar { events, .. } => {
-            let row_count = events.len().clamp(1, 6);
+            let row_count = events.len().clamp(1, 7);
             let nat = 72.0 + (row_count as f32) * 48.0;
             (nat, (nat - 30.0).max(120.0))
         }

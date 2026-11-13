@@ -298,9 +298,6 @@ async fn run_device(
     renderer.render(&mut canvas, &config, 0, &current_states, true);
     flush(&mut fb, &canvas, config.device.full_refresh_cycles, true);
 
-    let mut clock = tokio::time::interval(Duration::from_secs(60));
-    clock.tick().await;
-
     loop {
         let can_sleep = sleep_backend_enabled && sleep_hw_supported && sleep_failures < 3 && !power::is_plugged() && !wifi_restoring;
         let sleep_deadline = if can_sleep {
@@ -313,6 +310,7 @@ async fn run_device(
         } else {
             None
         };
+        let clock_deadline = next_minute_deadline();
 
         tokio::select! {
             _ = async {
@@ -572,7 +570,7 @@ async fn run_device(
                 flush(&mut fb, &canvas, config.device.full_refresh_cycles, false);
             }
 
-            _ = clock.tick() => {
+            _ = tokio::time::sleep_until(clock_deadline) => {
                 renderer.render(&mut canvas, &config, 0, &current_states, true);
                 flush(&mut fb, &canvas, config.device.full_refresh_cycles, false);
             }
@@ -591,6 +589,15 @@ async fn run_device(
     drop(fb);
     tracing::info!("Dashboard exited cleanly");
     std::process::exit(0);
+}
+
+fn next_minute_deadline() -> tokio::time::Instant {
+    let now = chrono::Utc::now();
+    let secs_into_min = now.timestamp().rem_euclid(60) as u64;
+    let nanos = now.timestamp_subsec_nanos() as u64;
+    let elapsed_ns = secs_into_min * 1_000_000_000 + nanos;
+    let wait_ns = (60_000_000_000 - elapsed_ns) + 50_000_000;
+    tokio::time::Instant::now() + Duration::from_nanos(wait_ns)
 }
 
 fn is_exit_event(event: &InputEvent, renderer: &ScreenRenderer, last_tap: &mut Instant) -> bool {

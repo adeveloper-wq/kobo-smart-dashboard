@@ -308,7 +308,7 @@ def get_configured_calendars(config: dict) -> list[dict]:
 
 
 def get_person_calendar_events(cal_cfg: dict, now: datetime) -> tuple[list, Optional[datetime]]:
-    """Fetch, parse, and filter events for a specific person's calendar, always returning next 4 events."""
+    """Fetch, parse, and filter events for a specific person's calendar, always returning next 7 events."""
     global _calendar_cache
     if not cal_cfg.get("enabled", True):
         return [], None
@@ -357,8 +357,8 @@ def get_person_calendar_events(cal_cfg: dict, now: datetime) -> tuple[list, Opti
 
         _calendar_cache[cal_id] = {"data": raw_events, "timestamp": now_ts}
 
-    # Always return next 4 events
-    formatted = calendar_parser.filter_and_format_events(raw_events, scope="all_upcoming", reference_dt=now, max_events=4)
+    # Always return next 7 events
+    formatted = calendar_parser.filter_and_format_events(raw_events, scope="all_upcoming", reference_dt=now, max_events=7)
 
     # Find earliest upcoming event start
     next_event_dt = None
