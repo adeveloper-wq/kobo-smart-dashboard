@@ -19,7 +19,7 @@ pub fn render_greeting_card(
     title: Option<&str>,
     temperature: Option<f32>,
     condition: Option<&str>,
-    _humidity: Option<f32>,
+    humidity: Option<f32>,
     _targets: &mut Vec<InteractiveTarget>,
 ) {
     draw_card(canvas, theme, rect, None);
@@ -28,8 +28,12 @@ pub fn render_greeting_card(
     let max_w = rect.w - 2.0 * PAD;
     let inner_h = rect.h - 24.0;
     let cond = condition.unwrap_or("unavailable");
-    let has_weather = temperature.is_some() || condition.is_some();
-    let temp_str = temperature.map(|t| format!("{:.0}°", t)).unwrap_or_else(|| "--".to_string());
+    let has_weather = temperature.is_some() || condition.is_some() || humidity.is_some();
+    let temp_part = temperature.map(|t| format!("{:.0}°", t)).unwrap_or_else(|| "--".to_string());
+    let temp_str = match humidity {
+        Some(h) => format!("{} · {:.0}%", temp_part, h),
+        None => temp_part,
+    };
 
     let mut items: Vec<Item> = title.unwrap_or("Willkommen").split_whitespace().map(|w| Item::Word(w.to_string())).collect();
     if has_weather {

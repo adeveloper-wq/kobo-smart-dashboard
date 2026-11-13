@@ -1066,7 +1066,11 @@
 
       // Weather + Forecast
       if (data.weather) {
-        document.getElementById('ksTemp').textContent = `${Math.round(data.weather.temperature || 0)}°`;
+        const tempRounded = Math.round(data.weather.temperature || 0);
+        const humText = data.weather.humidity !== undefined && data.weather.humidity !== null
+          ? ` · ${Math.round(data.weather.humidity)}%`
+          : '';
+        document.getElementById('ksTemp').textContent = `${tempRounded}°${humText}`;
         document.getElementById('ksWeatherIcon').innerHTML = weatherIconSvg(data.weather.condition, 32);
 
         // Render 4-day forecast
