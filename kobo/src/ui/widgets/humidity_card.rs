@@ -47,15 +47,27 @@ pub fn render_humidity_row(
     }
 
     let count = sensors.len().min(5);
-    let col_w = rect.w / count as f32;
+    let icon_col_w = 58.0;
+    let icon_s = 32.0;
+    canvas.draw_icon(
+        "droplet",
+        rect.x + (icon_col_w - icon_s) / 2.0 + 4.0,
+        rect.y + (rect.h - icon_s) / 2.0,
+        icon_s,
+        theme.cool.solid,
+        2.2,
+    );
+
+    let col_x0 = rect.x + icon_col_w;
+    let col_w = (rect.w - icon_col_w) / count as f32;
     let name_size = 24.0;
     let val_size = 46.0;
     let unit_size = 24.0;
 
     for (i, sensor) in sensors.iter().take(count).enumerate() {
-        let cx = rect.x + (i as f32 + 0.5) * col_w;
+        let cx = col_x0 + (i as f32 + 0.5) * col_w;
         if i > 0 {
-            let div_x = rect.x + i as f32 * col_w;
+            let div_x = col_x0 + i as f32 * col_w;
             canvas.fill_rect(div_x - 1.0, rect.y + 18.0, 2.0, rect.h - 36.0, theme.border);
         }
 
@@ -63,18 +75,14 @@ pub fn render_humidity_row(
         let name_y = rect.y + 18.0;
         canvas.draw_text_fit(&sensor.name, cx, name_y, name_size, true, theme.text_muted, TextAlign::Center, max_w);
 
-        let icon_s = 24.0;
-        let icon_gap = 6.0;
         let val_w = canvas.measure_text(&sensor.value, val_size, true).0;
         let unit_w = if sensor.unit.is_empty() { 0.0 } else { canvas.measure_text(&sensor.unit, unit_size, false).0 + 4.0 };
-        let total_w = (icon_s + icon_gap + val_w + unit_w).min(max_w);
+        let total_w = (val_w + unit_w).min(max_w);
         let start_x = cx - total_w / 2.0;
         let val_y = rect.y + 58.0;
-        canvas.draw_icon("droplet", start_x, val_y + (val_size - icon_s) * 0.45, icon_s, theme.cool.solid, 2.0);
-        let text_x = start_x + icon_s + icon_gap;
-        let drawn_vw = canvas.draw_text_fit(&sensor.value, text_x, val_y, val_size, true, theme.text, TextAlign::Left, (max_w - icon_s - icon_gap - unit_w).max(10.0));
+        let drawn_vw = canvas.draw_text_fit(&sensor.value, start_x, val_y, val_size, true, theme.text, TextAlign::Left, (max_w - unit_w).max(10.0));
         if !sensor.unit.is_empty() {
-            canvas.draw_text(&sensor.unit, text_x + drawn_vw + 4.0, val_y + val_size * 0.85 - unit_size * 0.85, unit_size, false, theme.text_muted, TextAlign::Left);
+            canvas.draw_text(&sensor.unit, start_x + drawn_vw + 4.0, val_y + val_size * 0.85 - unit_size * 0.85, unit_size, false, theme.text_muted, TextAlign::Left);
         }
     }
 }
